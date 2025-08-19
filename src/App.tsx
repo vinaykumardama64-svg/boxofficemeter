@@ -28,15 +28,15 @@ function App() {
         const parsed = Papa.parse(text.trim(), { header: true });
         const cleanedData: MovieData[] = parsed.data
           .map((row: any) => {
-            if (!row.movie || !row.region || !row.area) return null;
+            if (!row["Movie"] || !row["Region"] || !row["Area"]) return null;
             return {
-              movie: row.movie,
-              region: row.region,
-              area: row.area,
-              day1: Number(row["day1"]) || 0,
-              week1: Number(row["week1"]) || 0,
-              finalGross: Number(row["final gross"]) || 0,
-              lastUpdated: row["last updated"] || "N/A",
+              movie: row["Movie"],
+              region: row["Region"],
+              area: row["Area"],
+              day1: Number(row["Day 1"]) || 0,
+              week1: Number(row["Week 1"]) || 0,
+              finalGross: Number(row["Final Gross"]) || 0,
+              lastUpdated: row["Last Updated"] || "N/A",
             };
           })
           .filter(Boolean) as MovieData[];
