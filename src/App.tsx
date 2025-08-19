@@ -15,6 +15,12 @@ interface Row {
 export default function App() {
   const [data, setData] = useState<Row[]>([]);
 
+  const formatNumber = (value: string) => {
+    const num = parseInt(value.replace(/[^0-9]/g, ""));
+    if (isNaN(num)) return value;
+    return new Intl.NumberFormat("en-IN").format(num);
+  };
+
   useEffect(() => {
     fetch(CSV_URL)
       .then((res) => res.text())
@@ -54,9 +60,9 @@ export default function App() {
               <td className="border border-gray-400 px-2 py-1">{row.Movie}</td>
               <td className="border border-gray-400 px-2 py-1">{row.Region}</td>
               <td className="border border-gray-400 px-2 py-1">{row.Area}</td>
-              <td className="border border-gray-400 px-2 py-1">{row["Day 1"]}</td>
-              <td className="border border-gray-400 px-2 py-1">{row["Week 1"]}</td>
-              <td className="border border-gray-400 px-2 py-1">{row["Final Gross"]}</td>
+              <td className="border border-gray-400 px-2 py-1">{formatNumber(row["Day 1"])}</td>
+              <td className="border border-gray-400 px-2 py-1">{formatNumber(row["Week 1"])}</td>
+              <td className="border border-gray-400 px-2 py-1">{formatNumber(row["Final Gross"])}</td>
               <td className="border border-gray-400 px-2 py-1">{row["Last Updated"]}</td>
             </tr>
           ))}
