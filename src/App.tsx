@@ -8,7 +8,7 @@ type Row = {
   gross: number;
   day1_gross: number;
   week1_total: number;
-  closing_gross: number;
+  last_updated: string;
 };
 
 export default function App() {
@@ -33,7 +33,7 @@ export default function App() {
           .map(line => {
             const parts = line.split(",").map(v => v.trim());
             if (parts.length < 7) return null;
-            const [movie, state, area, gross, day1, week1, closing] = parts;
+            const [movie, state, area, gross, day1, week1, updated] = parts;
             return {
               movie,
               state,
@@ -41,7 +41,7 @@ export default function App() {
               gross: Number(gross) || 0,
               day1_gross: Number(day1) || 0,
               week1_total: Number(week1) || 0,
-              closing_gross: Number(closing) || 0,
+              last_updated: updated || "N/A",
             };
           })
           .filter(Boolean); // remove nulls
@@ -80,11 +80,10 @@ export default function App() {
   const totalGross = filteredRows.reduce((sum, r) => sum + r.gross, 0);
   const totalDay1 = filteredRows.reduce((sum, r) => sum + r.day1_gross, 0);
   const totalWeek1 = filteredRows.reduce((sum, r) => sum + r.week1_total, 0);
-  const totalClosing = filteredRows.reduce((sum, r) => sum + r.closing_gross, 0);
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Boxmeter — Box Office Tracker (Robust)</h1>
+      <h1>Boxmeter — Box Office Tracker</h1>
 
       {error && <p>{error}</p>}
 
@@ -110,10 +109,9 @@ export default function App() {
 
         <label style={{ marginLeft: 16 }}>Sort by: </label>
         <select value={sortField} onChange={e => setSortField(e.target.value as keyof Row)}>
-          <option value="gross">Gross</option>
+          <option value="gross">Final Gross</option>
           <option value="day1_gross">Day 1 Gross</option>
           <option value="week1_total">Week 1 Total</option>
-          <option value="closing_gross">Closing Gross</option>
         </select>
 
         <button onClick={() => setSortAsc(prev => !prev)} style={{ marginLeft: 8 }}>
@@ -122,14 +120,14 @@ export default function App() {
       </div>
 
       <div style={{ marginBottom: 12, fontWeight: "bold" }}>
-        🎯 Total Gross: ₹{totalGross.toLocaleString()} | Day 1: ₹{totalDay1.toLocaleString()} | Week 1: ₹{totalWeek1.toLocaleString()} | Closing: ₹{totalClosing.toLocaleString()}
+        🎯 Final Gross: ₹{totalGross.toLocaleString()} | Day 1: ₹{totalDay1.toLocaleString()} | Week 1: ₹{totalWeek1.toLocaleString()}
       </div>
 
       <table border={1} cellPadding={8}>
         <thead>
           <tr>
             <th>Movie</th><th>State</th><th>Area</th>
-            <th>Gross</th><th>Day 1</th><th>Week 1</th><th>Closing</th>
+            <th>Final Gross</th><th>Day 1</th><th>Week 1</th><th>Last Updated</th>
           </tr>
         </thead>
         <tbody>
@@ -141,7 +139,7 @@ export default function App() {
               <td>{r.gross.toLocaleString()}</td>
               <td>{r.day1_gross.toLocaleString()}</td>
               <td>{r.week1_total.toLocaleString()}</td>
-              <td>{r.closing_gross.toLocaleString()}</td>
+              <td>{r.last_updated}</td>
             </tr>
           ))}
         </tbody>
