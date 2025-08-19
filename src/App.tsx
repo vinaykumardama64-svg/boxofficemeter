@@ -1,55 +1,85 @@
-
+import React from "react";
 import { useEffect, useState } from "react";
+import Papa from "papaparse";
+import "./App.css";
 
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQjCp30NwoHJi0X97M_Xsg7aGqKdHkPPHBzcZMsYkNUr2CB2JFap0f4o5SpcdLLebxHFnG278MBoZX7/pub?gid=0&single=true&output=csv";
+const CSV_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vQjCp30NwoHJi0X97M_Xsg7aGqKdHkPPHBzcZMsYkNUr2CB2JFap0f4o5SpcdLLebxHFnG278MBoZX7/pub?gid=0&single=true&output=csv";
 
-export default function App() {
-  const [data, setData] = useState<string[][]>([]);
+interface MovieData {
+  movie: string;
+  region: string;
+  area: string;
+  day1: number;
+  week1: number;
+  finalGross: number;
+  lastUpdated: string;
+}
+
+function App() {
+  const [data, setData] = useState<MovieData[]>([]);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
     const fetchCSV = async () => {
-      const res = await fetch(CSV_URL);
-      const text = await res.text();
-      const lines = text.split("\n");
-      const parsed = lines.slice(1).map(line => {
-        const parts = line.split(",");
-        return parts.length === 7 ? parts : null;
-      }).filter(Boolean) as string[][];
-      setData(parsed);
+      try {
+        const res = await fetch(CSV_URL);
+        const text = await res.text();
+        const parsed = Papa.parse(text.trim(), { header: true });
+        const cleanedData: MovieData[] = parsed.data
+          .map((row: any) => {
+            if (!row.movie || !row.region || !row.area) return null;
+            return {
+              movie: row.movie,
+              region: row.region,
+              area: row.area,
+              day1: Number(row["day1"]) || 0,
+              week1: Number(row["week1"]) || 0,
+              finalGross: Number(row["final gross"]) || 0,
+              lastUpdated: row["last updated"] || "N/A",
+            };
+          })
+          .filter(Boolean) as MovieData[];
+        setData(cleanedData);
+      } catch (error) {
+        console.error("Failed to fetch CSV:", error);
+      }
     };
-
     fetchCSV();
   }, []);
 
-  const filteredData = data.filter(row =>
-    row[0].toLowerCase().includes(search.toLowerCase()) ||
-    row[1].toLowerCase().includes(search.toLowerCase()) ||
-    row[2].toLowerCase().includes(search.toLowerCase())
+  const filteredData = data.filter(entry =>
+    Object.values(entry)
+      .join(" ")
+      .toLowerCase()
+      .includes(search.toLowerCase())
   );
 
-  const formatNum = (val: string) => {
-    const num = parseInt(val);
-    return isNaN(num) ? val : num.toLocaleString("en-IN");
-  };
-
-  const totalFinalGross = filteredData.reduce((sum, row) => {
-    const val = parseInt(row[5]);
-    return isNaN(val) ? sum : sum + val;
-  }, 0);
+  const totalGross = filteredData.reduce((sum, item) => sum + item.finalGross, 0);
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>🎬 Box Office Tracker</h1>
+    <div className="App">
+      <h1>🎬 BoxOfficeTrack</h1>
       <input
         type="text"
-        placeholder="Search by Movie / Region / Area"
+        placeholder="Search by movie, region, area..."
         value={search}
         onChange={e => setSearch(e.target.value)}
-        style={{ marginBottom: 10, padding: 5, width: "60%" }}
+        style={{ marginBottom: "20px", padding: "6px", fontSize: "16px", width: "60%" }}
       />
-      <h3>Total Final Gross: ₹ {totalFinalGross.toLocaleString("en-IN")}</h3>
-      <table border={1} cellPadding={6} cellSpacing={0}>
+
+      <div className="kpis">
+        <div className="kpi-card">
+          <h3>Total Final Gross</h3>
+          <p>₹{totalGross.toLocaleString()}</p>
+        </div>
+        <div className="kpi-card">
+          <h3>Entries</h3>
+          <p>{filteredData.length}</p>
+        </div>
+      </div>
+
+      <table>
         <thead>
           <tr>
             <th>Movie</th>
@@ -62,15 +92,15 @@ export default function App() {
           </tr>
         </thead>
         <tbody>
-          {filteredData.map((row, idx) => (
-            <tr key={idx}>
-              <td>{row[0]}</td>
-              <td>{row[1]}</td>
-              <td>{row[2]}</td>
-              <td>{formatNum(row[3])}</td>
-              <td>{formatNum(row[4])}</td>
-              <td>{formatNum(row[5])}</td>
-              <td>{row[6]}</td>
+          {filteredData.map((entry, index) => (
+            <tr key={index}>
+              <td>{entry.movie}</td>
+              <td>{entry.region}</td>
+              <td>{entry.area}</td>
+              <td>₹{entry.day1.toLocaleString()}</td>
+              <td>₹{entry.week1.toLocaleString()}</td>
+              <td>₹{entry.finalGross.toLocaleString()}</td>
+              <td>{entry.lastUpdated}</td>
             </tr>
           ))}
         </tbody>
@@ -78,3 +108,5 @@ export default function App() {
     </div>
   );
 }
+
+export default App;
