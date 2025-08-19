@@ -24,6 +24,7 @@ function App() {
       try {
         const res = await fetch(CSV_URL);
         const text = await res.text();
+        console.log("Fetched CSV raw text:", text);
 
         const parsed = Papa.parse(text.trim(), {
           header: true,
@@ -116,3 +117,4 @@ function App() {
 }
 
 export default App;
+ 
