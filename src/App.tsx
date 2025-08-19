@@ -25,28 +25,35 @@ function App() {
       try {
         const res = await fetch(CSV_URL);
         const text = await res.text();
-        const lines = text.trim().split("\n");
+        const parsed = Papa.parse(text.trim(), { header: true });
+        const cleanedData: MovieData[] = parsed.data
+          .map((row: any) => {
+            const movie = (row.movie || "").trim().replace(/^"+|"+$/g, "");
+            const region = (row.region || "").trim().replace(/^"+|"+$/g, "");
+            const area = (row.area || "").trim().replace(/^"+|"+$/g, "");
+            const day1 = parseInt((row["day1"] || "0").replace(/[^0-9]/g, "")) || 0;
+            const week1 = parseInt((row["week1"] || "0").replace(/[^0-9]/g, "")) || 0;
+            const finalGross = parseInt((row["final gross"] || "0").replace(/[^0-9]/g, "")) || 0;
+            const lastUpdated = (row["last updated"] || "N/A").trim().replace(/^"+|"+$/g, "");
 
-        const cleanedData: MovieData[] = lines.slice(1).map((line) => {
-          const parts = line.replace(/^"|"$/g, "").split(",");
+            if (!movie || !region || !area) return null;
 
-          return {
-            movie: parts[0]?.trim(),
-            region: parts[1]?.trim(),
-            area: parts[2]?.trim(),
-            day1: Number(parts[3]?.replace(/,/g, "") || "0"),
-            week1: Number(parts[4]?.replace(/,/g, "") || "0"),
-            finalGross: Number(parts[5]?.replace(/,/g, "") || "0"),
-            lastUpdated: parts[6]?.trim() || "N/A",
-          };
-        });
-
-        setData(cleanedData.filter(entry => entry.movie));
+            return {
+              movie,
+              region,
+              area,
+              day1,
+              week1,
+              finalGross,
+              lastUpdated,
+            };
+          })
+          .filter(Boolean) as MovieData[];
+        setData(cleanedData);
       } catch (error) {
         console.error("Failed to fetch CSV:", error);
       }
     };
-
     fetchCSV();
   }, []);
 
