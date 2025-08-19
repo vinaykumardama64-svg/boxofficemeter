@@ -24,24 +24,23 @@ function App() {
       try {
         const res = await fetch(CSV_URL);
         const text = await res.text();
-        console.log("Fetched CSV raw text:", text);
-
-        const parsed = Papa.parse(text.trim(), {
+        const parsed = Papa.parse(text, {
           header: true,
           skipEmptyLines: true,
-          quoteChar: '"',
+          transform: (value) => value.trim().replace(/^"|"$/g, "") // remove surrounding quotes
         });
 
         const cleanedData: MovieData[] = parsed.data
           .map((row: any) => {
             if (!row.movie || !row.region || !row.area) return null;
+
             return {
-              movie: row.movie.trim(),
-              region: row.region.trim(),
-              area: row.area.trim(),
-              day1: Number(row["day1"]) || 0,
-              week1: Number(row["week1"]) || 0,
-              finalGross: Number(row["final gross"]) || 0,
+              movie: row.movie,
+              region: row.region,
+              area: row.area,
+              day1: Number((row["day1"] || "0").replace(/,/g, "")),
+              week1: Number((row["week1"] || "0").replace(/,/g, "")),
+              finalGross: Number((row["final gross"] || "0").replace(/,/g, "")),
               lastUpdated: row["last updated"] || "N/A",
             };
           })
@@ -52,6 +51,7 @@ function App() {
         console.error("Failed to fetch CSV:", error);
       }
     };
+
     fetchCSV();
   }, []);
 
@@ -117,4 +117,3 @@ function App() {
 }
 
 export default App;
- 
