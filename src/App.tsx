@@ -1,69 +1,145 @@
+
 import React, { useEffect, useState } from "react";
 
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQjCp30NwoHJi0X97M_Xsg7aGqKdHkPPHBzcZMsYkNUr2CB2JFap0f4o5SpcdLLebxHFnG278MBoZX7/pub?gid=0&single=true&output=csv";
-
-interface Row {
-  Movie: string;
-  Region: string;
-  Area: string;
-  "Day 1": string;
-  "Week 1": string;
-  "Final Gross": string;
-  "Last Updated": string;
-}
+type Row = {
+  movie: string;
+  state: string;
+  area: string;
+  gross: number;
+  day1_gross: number;
+  week1_total: number;
+  last_updated: string;
+};
 
 export default function App() {
-  const [data, setData] = useState<Row[]>([]);
-
-  const formatNumber = (value: string) => {
-    const num = parseInt(value.replace(/[^0-9]/g, ""));
-    if (isNaN(num)) return value;
-    return new Intl.NumberFormat("en-IN").format(num);
-  };
+  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQjCp30NwoHJi0X97M_Xsg7aGqKdHkPPHBzcZMsYkNUr2CB2JFap0f4o5SpcdLLebxHFnG278MBoZX7/pub?gid=0&single=true&output=csv";
+  const [rows, setRows] = useState<Row[]>([]);
+  const [filteredRows, setFilteredRows] = useState<Row[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedMovie, setSelectedMovie] = useState<string>("All");
+  const [selectedState, setSelectedState] = useState<string>("All");
+  const [sortField, setSortField] = useState<keyof Row>("gross");
+  const [sortAsc, setSortAsc] = useState<boolean>(false);
+  const [search, setSearch] = useState<string>("");
 
   useEffect(() => {
-    fetch(CSV_URL)
-      .then((res) => res.text())
-      .then((text) => {
-        const lines = text.split("\n").filter(Boolean);
-        const headers = lines[0].split(",").map(h => h.trim());
-        const rows = lines.slice(1).map(line => {
-          const values = line.split(",").map(v => v.trim().replace(/^"|"$/g, ""));
-          const obj: any = {};
-          headers.forEach((header, idx) => {
-            obj[header] = values[idx] || "";
-          });
-          return obj as Row;
-        });
-        setData(rows);
-      });
-  }, []);
+    async function fetchCSV() {
+      try {
+        const res = await fetch(CSV_URL);
+        const text = await res.text();
+        const lines = text.trim().split("\n");
+        const data = lines
+          .slice(1)
+          .map(line => {
+            const parts = line.split(",").map(v => v.trim());
+            if (parts.length < 7) return null;
+            const [movie, state, area, gross, day1, week1, updated] = parts;
+            return {
+              movie,
+              state,
+              area,
+              gross: Number(gross) || 0,
+              day1_gross: Number(day1) || 0,
+              week1_total: Number(week1) || 0,
+              last_updated: updated || "N/A",
+            };
+          })
+          .filter(Boolean);
+        setRows(data as Row[]);
+      } catch (err) {
+        setError("Failed to load data.");
+      }
+    }
+    if (CSV_URL) fetchCSV();
+  }, [CSV_URL]);
+
+  useEffect(() => {
+    let data = [...rows];
+    if (selectedMovie !== "All") data = data.filter(r => r.movie === selectedMovie);
+    if (selectedState !== "All") data = data.filter(r => r.state === selectedState);
+    if (search.trim()) {
+      const s = search.trim().toLowerCase();
+      data = data.filter(r =>
+        r.movie.toLowerCase().includes(s) ||
+        r.state.toLowerCase().includes(s) ||
+        r.area.toLowerCase().includes(s)
+      );
+    }
+
+    data.sort((a, b) => {
+      if (sortAsc) return a[sortField] - b[sortField];
+      else return b[sortField] - a[sortField];
+    });
+
+    setFilteredRows(data);
+  }, [rows, selectedMovie, selectedState, sortField, sortAsc, search]);
+
+  const movies = Array.from(new Set(rows.map(r => r.movie)));
+  const states = Array.from(new Set(rows.map(r => r.state)));
+
+  const totalGross = filteredRows.reduce((sum, r) => sum + r.gross, 0);
+  const totalDay1 = filteredRows.reduce((sum, r) => sum + r.day1_gross, 0);
+  const totalWeek1 = filteredRows.reduce((sum, r) => sum + r.week1_total, 0);
 
   return (
-    <div className="p-4 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Box Office Tracker</h1>
-      <table className="w-full border-collapse border border-gray-400">
-        <thead className="bg-gray-200">
+    <div style={{ padding: 20 }}>
+      <h1>Boxmeter — Box Office Tracker</h1>
+
+      {error && <p>{error}</p>}
+
+      <div style={{ marginBottom: 16 }}>
+        <input
+          placeholder="Search movie, state, area"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ padding: 6, width: 250, marginRight: 16 }}
+        />
+
+        <label>Filter by Movie: </label>
+        <select value={selectedMovie} onChange={e => setSelectedMovie(e.target.value)}>
+          <option value="All">All</option>
+          {movies.map(m => <option key={m} value={m}>{m}</option>)}
+        </select>
+
+        <label style={{ marginLeft: 16 }}>Filter by Region: </label>
+        <select value={selectedState} onChange={e => setSelectedState(e.target.value)}>
+          <option value="All">All</option>
+          {states.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+
+        <label style={{ marginLeft: 16 }}>Sort by: </label>
+        <select value={sortField} onChange={e => setSortField(e.target.value as keyof Row)}>
+          <option value="gross">Final Gross</option>
+          <option value="day1_gross">Day 1 Gross</option>
+          <option value="week1_total">Week 1 Total</option>
+        </select>
+
+        <button onClick={() => setSortAsc(prev => !prev)} style={{ marginLeft: 8 }}>
+          {sortAsc ? "↑ Asc" : "↓ Desc"}
+        </button>
+      </div>
+
+      <div style={{ marginBottom: 12, fontWeight: "bold" }}>
+        🎯 Final Gross: ₹{totalGross.toLocaleString()} | Day 1: ₹{totalDay1.toLocaleString()} | Week 1: ₹{totalWeek1.toLocaleString()}
+      </div>
+
+      <table border={1} cellPadding={8}>
+        <thead>
           <tr>
-            <th className="border border-gray-400 px-2 py-1">Movie</th>
-            <th className="border border-gray-400 px-2 py-1">Region</th>
-            <th className="border border-gray-400 px-2 py-1">Area</th>
-            <th className="border border-gray-400 px-2 py-1">Day 1</th>
-            <th className="border border-gray-400 px-2 py-1">Week 1</th>
-            <th className="border border-gray-400 px-2 py-1">Final Gross</th>
-            <th className="border border-gray-400 px-2 py-1">Last Updated</th>
+            <th>Movie</th><th>Region</th><th>Area</th>
+            <th>Day 1</th><th>Week 1</th><th>Final Gross</th><th>Last Updated</th>
           </tr>
         </thead>
         <tbody>
-          {data.map((row, i) => (
+          {filteredRows.map((r, i) => (
             <tr key={i}>
-              <td className="border border-gray-400 px-2 py-1">{row.Movie}</td>
-              <td className="border border-gray-400 px-2 py-1">{row.Region}</td>
-              <td className="border border-gray-400 px-2 py-1">{row.Area}</td>
-              <td className="border border-gray-400 px-2 py-1">{formatNumber(row["Day 1"])}</td>
-              <td className="border border-gray-400 px-2 py-1">{formatNumber(row["Week 1"])}</td>
-              <td className="border border-gray-400 px-2 py-1">{formatNumber(row["Final Gross"])}</td>
-              <td className="border border-gray-400 px-2 py-1">{row["Last Updated"]}</td>
+              <td>{r.movie}</td>
+              <td>{r.state}</td>
+              <td>{r.area}</td>
+              <td>{r.day1_gross.toLocaleString()}</td>
+              <td>{r.week1_total.toLocaleString()}</td>
+              <td>{r.gross.toLocaleString()}</td>
+              <td>{r.last_updated}</td>
             </tr>
           ))}
         </tbody>
