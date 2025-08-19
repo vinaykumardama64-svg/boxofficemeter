@@ -24,31 +24,31 @@ function App() {
       try {
         const res = await fetch(CSV_URL);
         const text = await res.text();
-        console.log("RAW CSV TEXT:", text); // Debug
 
-        const parsed = Papa.parse(text.trim(), { header: true });
-        console.log("PARSED DATA:", parsed.data); // Debug
+        const parsed = Papa.parse(text.trim(), {
+          header: true,
+          skipEmptyLines: true,
+          quoteChar: '"',
+        });
 
-        const cleanedData: MovieData[] = (parsed.data as any[])
+        const cleanedData: MovieData[] = parsed.data
           .map((row: any) => {
             if (!row.movie || !row.region || !row.area) return null;
             return {
               movie: row.movie.trim(),
               region: row.region.trim(),
               area: row.area.trim(),
-              day1: Number(row.day1?.replace(/,/g, "")) || 0,
-              week1: Number(row.week1?.replace(/,/g, "")) || 0,
-              finalGross: Number(row["final gross"]?.replace(/,/g, "")) || 0,
+              day1: Number(row["day1"]) || 0,
+              week1: Number(row["week1"]) || 0,
+              finalGross: Number(row["final gross"]) || 0,
               lastUpdated: row["last updated"] || "N/A",
             };
           })
           .filter(Boolean) as MovieData[];
 
-        console.log("CLEANED DATA:", cleanedData); // Debug
-
         setData(cleanedData);
       } catch (error) {
-        console.error("Failed to fetch or parse CSV:", error);
+        console.error("Failed to fetch CSV:", error);
       }
     };
     fetchCSV();
