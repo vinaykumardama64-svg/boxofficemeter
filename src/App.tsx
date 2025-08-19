@@ -101,7 +101,7 @@ export default function App() {
           {movies.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
 
-        <label style={{ marginLeft: 16 }}>Filter by State: </label>
+        <label style={{ marginLeft: 16 }}>Filter by Region: </label>
         <select value={selectedState} onChange={e => setSelectedState(e.target.value)}>
           <option value="All">All</option>
           {states.map(s => <option key={s} value={s}>{s}</option>)}
@@ -126,7 +126,7 @@ export default function App() {
       <table border={1} cellPadding={8}>
         <thead>
           <tr>
-            <th>Movie</th><th>State</th><th>Area</th>
+            <th>Movie</th><th>Region</th><th>Area</th>
             <th>Day 1</th><th>Week 1</th><th>Final Gross</th><th>Last Updated</th>
           </tr>
         </thead>
