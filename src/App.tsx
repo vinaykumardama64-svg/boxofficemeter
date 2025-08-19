@@ -15,7 +15,8 @@ interface Row {
 export default function App() {
   const [data, setData] = useState<Row[]>([]);
 
-  const formatNumber = (value: string) => {
+  const formatNumber = (value: string | undefined) => {
+    if (!value) return "";
     const num = parseInt(value.replace(/[^0-9]/g, ""));
     if (isNaN(num)) return value;
     return new Intl.NumberFormat("en-IN").format(num);
