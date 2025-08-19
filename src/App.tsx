@@ -44,7 +44,7 @@ export default function App() {
               last_updated: updated || "N/A",
             };
           })
-          .filter(Boolean); // remove nulls
+          .filter(Boolean);
         setRows(data as Row[]);
       } catch (err) {
         setError("Failed to load data.");
@@ -127,7 +127,7 @@ export default function App() {
         <thead>
           <tr>
             <th>Movie</th><th>State</th><th>Area</th>
-            <th>Final Gross</th><th>Day 1</th><th>Week 1</th><th>Last Updated</th>
+            <th>Day 1</th><th>Week 1</th><th>Final Gross</th><th>Last Updated</th>
           </tr>
         </thead>
         <tbody>
@@ -136,9 +136,9 @@ export default function App() {
               <td>{r.movie}</td>
               <td>{r.state}</td>
               <td>{r.area}</td>
-              <td>{r.gross.toLocaleString()}</td>
               <td>{r.day1_gross.toLocaleString()}</td>
               <td>{r.week1_total.toLocaleString()}</td>
+              <td>{r.gross.toLocaleString()}</td>
               <td>{r.last_updated}</td>
             </tr>
           ))}
