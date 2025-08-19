@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import Papa from "papaparse";
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQjCp30NwoHJi0X97M_Xsg7aGqKdHkPPHBzcZMsYkNUr2CB2JFap0f4o5SpcdLLebxHFnG278MBoZX7/pub?gid=0&single=true&output=csv";
 
@@ -20,12 +19,17 @@ export default function App() {
     fetch(CSV_URL)
       .then((res) => res.text())
       .then((text) => {
-        const parsed = Papa.parse<Row>(text, {
-          header: true,
-          skipEmptyLines: true,
-          transform: (val) => val.trim().replace(/^"|"$/g, ""),
+        const lines = text.split("\n").filter(Boolean);
+        const headers = lines[0].split(",").map(h => h.trim());
+        const rows = lines.slice(1).map(line => {
+          const values = line.split(",").map(v => v.trim().replace(/^"|"$/g, ""));
+          const obj: any = {};
+          headers.forEach((header, idx) => {
+            obj[header] = values[idx] || "";
+          });
+          return obj as Row;
         });
-        setData(parsed.data);
+        setData(rows);
       });
   }, []);
 
