@@ -28,19 +28,24 @@ export default function App() {
         const res = await fetch(CSV_URL);
         const text = await res.text();
         const lines = text.trim().split("\n");
-        const data = lines.slice(1).map(line => {
-          const [movie, state, area, gross, day1, week1, closing] = line.split(",").map(v => v.trim());
-          return {
-            movie,
-            state,
-            area,
-            gross: Number(gross),
-            day1_gross: Number(day1),
-            week1_total: Number(week1),
-            closing_gross: Number(closing),
-          };
-        });
-        setRows(data);
+        const data = lines
+          .slice(1)
+          .map(line => {
+            const parts = line.split(",").map(v => v.trim());
+            if (parts.length < 7) return null;
+            const [movie, state, area, gross, day1, week1, closing] = parts;
+            return {
+              movie,
+              state,
+              area,
+              gross: Number(gross) || 0,
+              day1_gross: Number(day1) || 0,
+              week1_total: Number(week1) || 0,
+              closing_gross: Number(closing) || 0,
+            };
+          })
+          .filter(Boolean); // remove nulls
+        setRows(data as Row[]);
       } catch (err) {
         setError("Failed to load data.");
       }
@@ -79,7 +84,7 @@ export default function App() {
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Boxmeter — Box Office Tracker (Simplified)</h1>
+      <h1>Boxmeter — Box Office Tracker (Robust)</h1>
 
       {error && <p>{error}</p>}
 
