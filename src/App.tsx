@@ -1,5 +1,4 @@
-import React from "react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Papa from "papaparse";
 import "./App.css";
 
@@ -25,24 +24,31 @@ function App() {
       try {
         const res = await fetch(CSV_URL);
         const text = await res.text();
+        console.log("RAW CSV TEXT:", text); // Debug
+
         const parsed = Papa.parse(text.trim(), { header: true });
-        const cleanedData: MovieData[] = parsed.data
+        console.log("PARSED DATA:", parsed.data); // Debug
+
+        const cleanedData: MovieData[] = (parsed.data as any[])
           .map((row: any) => {
-            if (!row["Movie"] || !row["Region"] || !row["Area"]) return null;
+            if (!row.movie || !row.region || !row.area) return null;
             return {
-              movie: row["Movie"],
-              region: row["Region"],
-              area: row["Area"],
-              day1: Number(row["Day 1"]) || 0,
-              week1: Number(row["Week 1"]) || 0,
-              finalGross: Number(row["Final Gross"]) || 0,
-              lastUpdated: row["Last Updated"] || "N/A",
+              movie: row.movie.trim(),
+              region: row.region.trim(),
+              area: row.area.trim(),
+              day1: Number(row.day1?.replace(/,/g, "")) || 0,
+              week1: Number(row.week1?.replace(/,/g, "")) || 0,
+              finalGross: Number(row["final gross"]?.replace(/,/g, "")) || 0,
+              lastUpdated: row["last updated"] || "N/A",
             };
           })
           .filter(Boolean) as MovieData[];
+
+        console.log("CLEANED DATA:", cleanedData); // Debug
+
         setData(cleanedData);
       } catch (error) {
-        console.error("Failed to fetch CSV:", error);
+        console.error("Failed to fetch or parse CSV:", error);
       }
     };
     fetchCSV();
