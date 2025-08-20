@@ -16,9 +16,12 @@ interface MovieData {
 
 function App() {
   const [data, setData] = useState<MovieData[]>([]);
-  const [search, setSearch] = useState({ movie: "", region: "", area: "" });
-  const [sortColumn, setSortColumn] = useState<keyof MovieData | null>(null);
-  const [sortAsc, setSortAsc] = useState(true);
+  const [search, setSearch] = useState("");
+  const [movieFilter, setMovieFilter] = useState<string>("");
+  const [regionFilter, setRegionFilter] = useState<string>("");
+  const [areaFilter, setAreaFilter] = useState<string>("");
+  const [sortKey, setSortKey] = useState<keyof MovieData | null>(null);
+  const [sortAsc, setSortAsc] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,41 +48,32 @@ function App() {
     fetchData();
   }, []);
 
-  const filteredData = data.filter((entry) => {
+  let filteredData = data.filter((entry) => {
     return (
-      (search.movie === "" || entry.movie === search.movie) &&
-      (search.region === "" || entry.region === search.region) &&
-      (search.area === "" || entry.area === search.area)
+      (!movieFilter || entry.movie === movieFilter) &&
+      (!regionFilter || entry.region === regionFilter) &&
+      (!areaFilter || entry.area === areaFilter)
     );
   });
 
-  const sortedData = [...filteredData].sort((a, b) => {
-    if (!sortColumn) return 0;
-    return sortAsc
-      ? a[sortColumn] > b[sortColumn]
-        ? 1
-        : -1
-      : a[sortColumn] < b[sortColumn]
-      ? 1
-      : -1;
-  });
+  if (sortKey) {
+    filteredData = [...filteredData].sort((a, b) =>
+      sortAsc ? a[sortKey] - b[sortKey] : b[sortKey] - a[sortKey]
+    );
+  }
+
+  const uniqueMovies = [...new Set(data.map((d) => d.movie))];
+  const uniqueRegions = [...new Set(data.map((d) => d.region))];
+  const uniqueAreas = [...new Set(data.map((d) => d.area))];
 
   const totalDay1 = filteredData.reduce((sum, item) => sum + item.day1, 0);
   const totalWeek1 = filteredData.reduce((sum, item) => sum + item.week1, 0);
-  const totalFinalGross = filteredData.reduce(
-    (sum, item) => sum + item.finalGross,
-    0
-  );
+  const totalGross = filteredData.reduce((sum, item) => sum + item.finalGross, 0);
 
-  const getUnique = (key: keyof MovieData) => [
-    ...new Set(data.map((item) => item[key])),
-  ];
-
-  const handleSort = (column: keyof MovieData) => {
-    if (sortColumn === column) {
-      setSortAsc(!sortAsc);
-    } else {
-      setSortColumn(column);
+  const handleSort = (key: keyof MovieData) => {
+    if (sortKey === key) setSortAsc(!sortAsc);
+    else {
+      setSortKey(key);
       setSortAsc(true);
     }
   };
@@ -89,37 +83,24 @@ function App() {
       <h1>🎬 BoxOfficeTrack</h1>
 
       <div className="filters">
-        <select
-          value={search.movie}
-          onChange={(e) => setSearch({ ...search, movie: e.target.value })}
-        >
+        <select value={movieFilter} onChange={(e) => setMovieFilter(e.target.value)}>
           <option value="">All Movies</option>
-          {getUnique("movie").map((movie) => (
-            <option key={movie} value={movie}>
-              {movie}
-            </option>
+          {uniqueMovies.map((movie) => (
+            <option key={movie} value={movie}>{movie}</option>
           ))}
         </select>
-        <select
-          value={search.region}
-          onChange={(e) => setSearch({ ...search, region: e.target.value })}
-        >
+
+        <select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)}>
           <option value="">All Regions</option>
-          {getUnique("region").map((region) => (
-            <option key={region} value={region}>
-              {region}
-            </option>
+          {uniqueRegions.map((region) => (
+            <option key={region} value={region}>{region}</option>
           ))}
         </select>
-        <select
-          value={search.area}
-          onChange={(e) => setSearch({ ...search, area: e.target.value })}
-        >
+
+        <select value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
           <option value="">All Areas</option>
-          {getUnique("area").map((area) => (
-            <option key={area} value={area}>
-              {area}
-            </option>
+          {uniqueAreas.map((area) => (
+            <option key={area} value={area}>{area}</option>
           ))}
         </select>
       </div>
@@ -135,7 +116,11 @@ function App() {
         </div>
         <div className="kpi-card">
           <h3>Total Final Gross</h3>
-          <p>₹{totalFinalGross.toLocaleString()}</p>
+          <p>₹{totalGross.toLocaleString()}</p>
+        </div>
+        <div className="kpi-card">
+          <h3>Entries</h3>
+          <p>{filteredData.length}</p>
         </div>
       </div>
 
@@ -145,20 +130,14 @@ function App() {
             <th className="highlight">Movie</th>
             <th>Region</th>
             <th>Area</th>
-            <th onClick={() => handleSort("day1")} style={{ cursor: "pointer" }}>
-              Day 1 {sortColumn === "day1" && (sortAsc ? "↑" : "↓")}
-            </th>
-            <th onClick={() => handleSort("week1")} style={{ cursor: "pointer" }}>
-              Week 1 {sortColumn === "week1" && (sortAsc ? "↑" : "↓")}
-            </th>
-            <th onClick={() => handleSort("finalGross")} style={{ cursor: "pointer" }}>
-              Final Gross {sortColumn === "finalGross" && (sortAsc ? "↑" : "↓")}
-            </th>
+            <th onClick={() => handleSort("day1")} style={{ cursor: "pointer" }}>Day 1</th>
+            <th onClick={() => handleSort("week1")} style={{ cursor: "pointer" }}>Week 1</th>
+            <th onClick={() => handleSort("finalGross")} style={{ cursor: "pointer" }}>Final Gross</th>
             <th>Last Updated</th>
           </tr>
         </thead>
         <tbody>
-          {sortedData.map((entry, index) => (
+          {filteredData.map((entry, index) => (
             <tr key={index}>
               <td className="highlight">{entry.movie}</td>
               <td>{entry.region}</td>
