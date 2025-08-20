@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./App.css";
 
 const JSON_URL =
-  "https://opensheet.elk.sh/1Xf3oggoei5OZIBQm76gIxDi8gQDwhwz-43dG7CfGCxQ/Sheet1"; // your updated sheet link
+  "https://opensheet.elk.sh/1Xf3oggoei5OZIBQm76gIxDi8gQDwhwz-43dG7CfGCxQ/Sheet1";
 
 interface MovieData {
   movie: string;
@@ -16,10 +16,10 @@ interface MovieData {
 
 function App() {
   const [data, setData] = useState<MovieData[]>([]);
-  const [search, setSearch] = useState("");
-  const [movieFilter, setMovieFilter] = useState("");
-  const [regionFilter, setRegionFilter] = useState("");
-  const [areaFilter, setAreaFilter] = useState("");
+  const [filteredData, setFilteredData] = useState<MovieData[]>([]);
+  const [movieFilter, setMovieFilter] = useState<string>("");
+  const [regionFilter, setRegionFilter] = useState<string>("");
+  const [areaFilter, setAreaFilter] = useState<string>("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -38,6 +38,7 @@ function App() {
         }));
 
         setData(cleanedData);
+        setFilteredData(cleanedData);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -46,22 +47,25 @@ function App() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    let updatedData = data;
+
+    if (movieFilter) {
+      updatedData = updatedData.filter((d) => d.movie === movieFilter);
+    }
+    if (regionFilter) {
+      updatedData = updatedData.filter((d) => d.region === regionFilter);
+    }
+    if (areaFilter) {
+      updatedData = updatedData.filter((d) => d.area === areaFilter);
+    }
+
+    setFilteredData(updatedData);
+  }, [movieFilter, regionFilter, areaFilter, data]);
+
   const uniqueMovies = Array.from(new Set(data.map((d) => d.movie)));
   const uniqueRegions = Array.from(new Set(data.map((d) => d.region)));
   const uniqueAreas = Array.from(new Set(data.map((d) => d.area)));
-
-  const filteredData = data.filter((entry) => {
-    const matchSearch = Object.values(entry)
-      .join(" ")
-      .toLowerCase()
-      .includes(search.toLowerCase());
-
-    const matchMovie = movieFilter ? entry.movie === movieFilter : true;
-    const matchRegion = regionFilter ? entry.region === regionFilter : true;
-    const matchArea = areaFilter ? entry.area === areaFilter : true;
-
-    return matchSearch && matchMovie && matchRegion && matchArea;
-  });
 
   const totalDay1 = filteredData.reduce((sum, item) => sum + item.day1, 0);
   const totalWeek1 = filteredData.reduce((sum, item) => sum + item.week1, 0);
@@ -72,40 +76,47 @@ function App() {
 
   return (
     <div className="App">
-      <h1>🎬 BoxOfficeTrack</h1>
+      <h1 className="fade-in">🎬 BoxOfficeTrack</h1>
 
-      <input
-        type="text"
-        placeholder="Search by movie, region, area..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        style={{ marginBottom: "10px", padding: "6px", fontSize: "16px", width: "60%" }}
-      />
-
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-        <select value={movieFilter} onChange={(e) => setMovieFilter(e.target.value)}>
+      <div className="filters fade-in">
+        <select
+          value={movieFilter}
+          onChange={(e) => setMovieFilter(e.target.value)}
+        >
           <option value="">All Movies</option>
-          {uniqueMovies.map((m, idx) => (
-            <option key={idx} value={m}>{m}</option>
+          {uniqueMovies.map((movie, idx) => (
+            <option key={idx} value={movie}>
+              {movie}
+            </option>
           ))}
         </select>
 
-        <select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)}>
+        <select
+          value={regionFilter}
+          onChange={(e) => setRegionFilter(e.target.value)}
+        >
           <option value="">All Regions</option>
-          {uniqueRegions.map((r, idx) => (
-            <option key={idx} value={r}>{r}</option>
+          {uniqueRegions.map((region, idx) => (
+            <option key={idx} value={region}>
+              {region}
+            </option>
           ))}
         </select>
 
-        <select value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
+        <select
+          value={areaFilter}
+          onChange={(e) => setAreaFilter(e.target.value)}
+        >
           <option value="">All Areas</option>
-          {uniqueAreas.map((a, idx) => (
-            <option key={idx} value={a}>{a}</option>
+          {uniqueAreas.map((area, idx) => (
+            <option key={idx} value={area}>
+              {area}
+            </option>
           ))}
         </select>
       </div>
 
-      <div className="kpis">
+      <div className="kpis fade-in">
         <div className="kpi-card">
           <h3>Total Day 1</h3>
           <p>₹{totalDay1.toLocaleString()}</p>
@@ -124,7 +135,7 @@ function App() {
         </div>
       </div>
 
-      <table>
+      <table className="fade-in">
         <thead>
           <tr>
             <th>Movie</th>
@@ -139,7 +150,7 @@ function App() {
         <tbody>
           {filteredData.map((entry, index) => (
             <tr key={index}>
-              <td>{entry.movie}</td>
+              <td className="highlight">{entry.movie}</td>
               <td>{entry.region}</td>
               <td>{entry.area}</td>
               <td>₹{entry.day1.toLocaleString()}</td>
