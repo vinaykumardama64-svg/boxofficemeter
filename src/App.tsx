@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./App.css";
 
 const JSON_URL =
-  "https://opensheet.elk.sh/1Xf3oggoei5OZIBQm76gIxDi8gQDwhwz-43dG7CfGCxQ/Sheet1"; // 🔁 Replace with your actual opensheet URL
+  "https://opensheet.elk.sh/1Xf3oggoei5OZIBQm76gIxDi8gQDwhwz-43dG7CfGCxQ/Sheet1"; // your updated sheet link
 
 interface MovieData {
   movie: string;
@@ -28,10 +28,10 @@ function App() {
           movie: row.movie,
           region: row.region,
           area: row.area,
-          day1: Number(row["day1"]) || 0,
-          week1: Number(row["week1"]) || 0,
-          finalGross: Number(row["final gross"]) || 0,
-          lastUpdated: row["last updated"] || "N/A",
+          day1: Number(row.day1) || 0,
+          week1: Number(row.week1) || 0,
+          finalGross: Number(row.finalGross) || 0,
+          lastUpdated: row.lastUpdated || "N/A",
         }));
 
         setData(cleanedData);
