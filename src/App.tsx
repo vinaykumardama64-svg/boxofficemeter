@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
-// Replace with your actual Google Sheet JSON URL
 const JSON_URL =
-  "https://opensheet.elk.sh/1Xf3oggoei5OZIBQm76gIxDi8gQDwhwz-43dG7CfGCxQ/Sheet1";
+  "https://opensheet.elk.sh/1Xf3oggoei5OZIBQm76gIxDi8gQDwhwz-43dG7CfGCxQ/Sheet1"; // 🔁 Replace with your actual opensheet URL
 
 interface MovieData {
   movie: string;
@@ -20,38 +19,38 @@ function App() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    const fetchJSON = async () => {
+    const fetchData = async () => {
       try {
         const res = await fetch(JSON_URL);
         const json = await res.json();
-        const cleanedData: MovieData[] = json
-          .map((row: any) => ({
-            movie: row.movie?.trim() || "",
-            region: row.region?.trim() || "",
-            area: row.area?.trim() || "",
-            day1: parseInt(row.day1 || "0", 10),
-            week1: parseInt(row.week1 || "0", 10),
-            finalGross: parseInt(row["final gross"] || "0", 10),
-            lastUpdated: row["last updated"]?.trim() || "N/A",
-          }))
-          .filter((row: MovieData) => row.movie && row.region && row.area);
+
+        const cleanedData: MovieData[] = json.map((row: any) => ({
+          movie: row.movie,
+          region: row.region,
+          area: row.area,
+          day1: Number(row["day1"]) || 0,
+          week1: Number(row["week1"]) || 0,
+          finalGross: Number(row["final gross"]) || 0,
+          lastUpdated: row["last updated"] || "N/A",
+        }));
+
         setData(cleanedData);
       } catch (error) {
-        console.error("Failed to fetch JSON:", error);
+        console.error("Error fetching data:", error);
       }
     };
 
-    fetchJSON();
+    fetchData();
   }, []);
 
-  const filteredData = data.filter(entry =>
-    Object.values(entry)
-      .join(" ")
-      .toLowerCase()
-      .includes(search.toLowerCase())
+  const filteredData = data.filter((entry) =>
+    Object.values(entry).join(" ").toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalGross = filteredData.reduce((sum, item) => sum + item.finalGross, 0);
+  const totalGross = filteredData.reduce(
+    (sum, item) => sum + item.finalGross,
+    0
+  );
 
   return (
     <div className="App">
@@ -60,13 +59,8 @@ function App() {
         type="text"
         placeholder="Search by movie, region, area..."
         value={search}
-        onChange={e => setSearch(e.target.value)}
-        style={{
-          marginBottom: "20px",
-          padding: "6px",
-          fontSize: "16px",
-          width: "60%",
-        }}
+        onChange={(e) => setSearch(e.target.value)}
+        style={{ marginBottom: "20px", padding: "6px", fontSize: "16px", width: "60%" }}
       />
 
       <div className="kpis">
