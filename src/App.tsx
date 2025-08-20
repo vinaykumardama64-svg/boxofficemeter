@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
+
 const JSON_URL =
   "https://opensheet.elk.sh/1Xf3oggoei5OZIBQm76gIxDi8gQDwhwz-43dG7CfGCxQ/Sheet1";
 
@@ -15,9 +16,9 @@ interface MovieData {
 
 function App() {
   const [data, setData] = useState<MovieData[]>([]);
-  const [movieFilter, setMovieFilter] = useState("");
-  const [regionFilter, setRegionFilter] = useState("");
-  const [areaFilter, setAreaFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [sortField, setSortField] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,68 +45,79 @@ function App() {
     fetchData();
   }, []);
 
-  const filteredData = data.filter(
-    (entry) =>
-      (!movieFilter || entry.movie === movieFilter) &&
-      (!regionFilter || entry.region === regionFilter) &&
-      (!areaFilter || entry.area === areaFilter)
-  );
-
-  const movies = Array.from(new Set(data.map((d) => d.movie)));
-  const regions = Array.from(new Set(data.map((d) => d.region)));
-  const areas = Array.from(new Set(data.map((d) => d.area)));
+  const filteredData = data
+    .filter((entry) =>
+      Object.values(entry).join(" ").toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (!sortField) return 0;
+      const valueA = a[sortField as keyof MovieData];
+      const valueB = b[sortField as keyof MovieData];
+      if (typeof valueA === "number" && typeof valueB === "number") {
+        return sortOrder === "asc" ? valueA - valueB : valueB - valueA;
+      }
+      return 0;
+    });
 
   const totalDay1 = filteredData.reduce((sum, item) => sum + item.day1, 0);
   const totalWeek1 = filteredData.reduce((sum, item) => sum + item.week1, 0);
   const totalFinalGross = filteredData.reduce((sum, item) => sum + item.finalGross, 0);
 
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
+
   return (
-    <div className="App fade-in">
+    <div className="App">
       <h1>🎬 BoxOfficeTrack</h1>
+      <input
+        type="text"
+        placeholder="Search by movie, region, area..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        style={{ marginBottom: "30px", padding: "6px", fontSize: "16px", width: "60%" }}
+      />
 
-      <div className="filters">
-        <select onChange={(e) => setMovieFilter(e.target.value)} value={movieFilter}>
-          <option value="">All Movies</option>
-          {movies.map((m) => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
-        <select onChange={(e) => setRegionFilter(e.target.value)} value={regionFilter}>
-          <option value="">All Regions</option>
-          {regions.map((r) => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </select>
-        <select onChange={(e) => setAreaFilter(e.target.value)} value={areaFilter}>
-          <option value="">All Areas</option>
-          {areas.map((a) => (
-            <option key={a} value={a}>{a}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="totals-box">
-        <div>Total Day 1: ₹{totalDay1.toLocaleString()}</div>
-        <div>Total Week 1: ₹{totalWeek1.toLocaleString()}</div>
-        <div>Total Final Gross: ₹{totalFinalGross.toLocaleString()}</div>
+      <div className="kpis-container">
+        <div className="kpi-card">
+          <h3>Total Day 1</h3>
+          <p>₹{totalDay1.toLocaleString()}</p>
+        </div>
+        <div className="kpi-card">
+          <h3>Total Week 1</h3>
+          <p>₹{totalWeek1.toLocaleString()}</p>
+        </div>
+        <div className="kpi-card">
+          <h3>Total Final Gross</h3>
+          <p>₹{totalFinalGross.toLocaleString()}</p>
+        </div>
+        <div className="kpi-card">
+          <h3>Entries</h3>
+          <p>{filteredData.length}</p>
+        </div>
       </div>
 
       <table className="styled-table">
         <thead>
           <tr>
-            <th className="highlight">Movie</th>
+            <th>Movie</th>
             <th>Region</th>
             <th>Area</th>
-            <th>Day 1</th>
-            <th>Week 1</th>
-            <th>Final Gross</th>
+            <th onClick={() => handleSort("day1")} style={{ cursor: "pointer" }}>Day 1 ⬍</th>
+            <th onClick={() => handleSort("week1")} style={{ cursor: "pointer" }}>Week 1 ⬍</th>
+            <th onClick={() => handleSort("finalGross")} style={{ cursor: "pointer" }}>Final Gross ⬍</th>
             <th>Last Updated</th>
           </tr>
         </thead>
         <tbody>
           {filteredData.map((entry, index) => (
             <tr key={index}>
-              <td className="highlight">{entry.movie}</td>
+              <td>{entry.movie}</td>
               <td>{entry.region}</td>
               <td>{entry.area}</td>
               <td>₹{entry.day1.toLocaleString()}</td>
