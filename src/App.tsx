@@ -16,8 +16,9 @@ interface MovieData {
 
 function App() {
   const [data, setData] = useState<MovieData[]>([]);
-  const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({ movie: "", region: "", area: "" });
+  const [search, setSearch] = useState({ movie: "", region: "", area: "" });
+  const [sortColumn, setSortColumn] = useState<keyof MovieData | null>(null);
+  const [sortAsc, setSortAsc] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,8 +32,8 @@ function App() {
           area: row.area,
           day1: Number(row["day1"]) || 0,
           week1: Number(row["week1"]) || 0,
-          finalGross: Number(row["finalGross"]) || 0,
-          lastUpdated: row["lastUpdated"] || "N/A",
+          finalGross: Number(row["final gross"]) || 0,
+          lastUpdated: row["last updated"] || "N/A",
         }));
 
         setData(cleanedData);
@@ -46,10 +47,21 @@ function App() {
 
   const filteredData = data.filter((entry) => {
     return (
-      entry.movie.toLowerCase().includes(filters.movie.toLowerCase()) &&
-      entry.region.toLowerCase().includes(filters.region.toLowerCase()) &&
-      entry.area.toLowerCase().includes(filters.area.toLowerCase())
+      (search.movie === "" || entry.movie === search.movie) &&
+      (search.region === "" || entry.region === search.region) &&
+      (search.area === "" || entry.area === search.area)
     );
+  });
+
+  const sortedData = [...filteredData].sort((a, b) => {
+    if (!sortColumn) return 0;
+    return sortAsc
+      ? a[sortColumn] > b[sortColumn]
+        ? 1
+        : -1
+      : a[sortColumn] < b[sortColumn]
+      ? 1
+      : -1;
   });
 
   const totalDay1 = filteredData.reduce((sum, item) => sum + item.day1, 0);
@@ -59,75 +71,102 @@ function App() {
     0
   );
 
-  return (
-    <div className="App" style={{ fontFamily: "Arial, sans-serif", padding: "20px" }}>
-      <h1 style={{ textAlign: "center", color: "#333" }}>🎬 BoxOfficeTrack</h1>
+  const getUnique = (key: keyof MovieData) => [
+    ...new Set(data.map((item) => item[key])),
+  ];
 
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px", justifyContent: "center" }}>
-        <input
-          type="text"
-          placeholder="Filter by movie"
-          value={filters.movie}
-          onChange={(e) => setFilters({ ...filters, movie: e.target.value })}
-          style={{ padding: "8px", fontSize: "14px" }}
-        />
-        <input
-          type="text"
-          placeholder="Filter by region"
-          value={filters.region}
-          onChange={(e) => setFilters({ ...filters, region: e.target.value })}
-          style={{ padding: "8px", fontSize: "14px" }}
-        />
-        <input
-          type="text"
-          placeholder="Filter by area"
-          value={filters.area}
-          onChange={(e) => setFilters({ ...filters, area: e.target.value })}
-          style={{ padding: "8px", fontSize: "14px" }}
-        />
+  const handleSort = (column: keyof MovieData) => {
+    if (sortColumn === column) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortColumn(column);
+      setSortAsc(true);
+    }
+  };
+
+  return (
+    <div className="App">
+      <h1>🎬 BoxOfficeTrack</h1>
+
+      <div className="filters">
+        <select
+          value={search.movie}
+          onChange={(e) => setSearch({ ...search, movie: e.target.value })}
+        >
+          <option value="">All Movies</option>
+          {getUnique("movie").map((movie) => (
+            <option key={movie} value={movie}>
+              {movie}
+            </option>
+          ))}
+        </select>
+        <select
+          value={search.region}
+          onChange={(e) => setSearch({ ...search, region: e.target.value })}
+        >
+          <option value="">All Regions</option>
+          {getUnique("region").map((region) => (
+            <option key={region} value={region}>
+              {region}
+            </option>
+          ))}
+        </select>
+        <select
+          value={search.area}
+          onChange={(e) => setSearch({ ...search, area: e.target.value })}
+        >
+          <option value="">All Areas</option>
+          {getUnique("area").map((area) => (
+            <option key={area} value={area}>
+              {area}
+            </option>
+          ))}
+        </select>
       </div>
 
-      <div className="kpis" style={{ display: "flex", justifyContent: "center", gap: "30px", marginBottom: "20px" }}>
-        <div className="kpi-card" style={{ border: "1px solid #ccc", borderRadius: "8px", padding: "10px 20px", backgroundColor: "#f9f9f9" }}>
+      <div className="kpis">
+        <div className="kpi-card">
           <h3>Total Day 1</h3>
           <p>₹{totalDay1.toLocaleString()}</p>
         </div>
-        <div className="kpi-card" style={{ border: "1px solid #ccc", borderRadius: "8px", padding: "10px 20px", backgroundColor: "#f9f9f9" }}>
+        <div className="kpi-card">
           <h3>Total Week 1</h3>
           <p>₹{totalWeek1.toLocaleString()}</p>
         </div>
-        <div className="kpi-card" style={{ border: "1px solid #ccc", borderRadius: "8px", padding: "10px 20px", backgroundColor: "#f9f9f9" }}>
+        <div className="kpi-card">
           <h3>Total Final Gross</h3>
           <p>₹{totalFinalGross.toLocaleString()}</p>
         </div>
-        <div className="kpi-card" style={{ border: "1px solid #ccc", borderRadius: "8px", padding: "10px 20px", backgroundColor: "#f9f9f9" }}>
-          <h3>Entries</h3>
-          <p>{filteredData.length}</p>
-        </div>
       </div>
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+      <table>
         <thead>
-          <tr style={{ backgroundColor: "#f0f0f0" }}>
-            <th style={{ border: "1px solid #ccc", padding: "8px" }}>Movie</th>
-            <th style={{ border: "1px solid #ccc", padding: "8px" }}>Region</th>
-            <th style={{ border: "1px solid #ccc", padding: "8px" }}>Area</th>
-            <th style={{ border: "1px solid #ccc", padding: "8px" }}>Day 1</th>
-            <th style={{ border: "1px solid #ccc", padding: "8px" }}>Week 1</th>
-            <th style={{ border: "1px solid #ccc", padding: "8px" }}>Final Gross</th>
-            <th style={{ border: "1px solid #ccc", padding: "8px" }}>Last Updated</th>
+          <tr>
+            <th className="highlight">Movie</th>
+            <th>Region</th>
+            <th>Area</th>
+            <th onClick={() => handleSort("day1")} style={{ cursor: "pointer" }}>
+              Day 1 {sortColumn === "day1" && (sortAsc ? "↑" : "↓")}
+            </th>
+            <th onClick={() => handleSort("week1")} style={{ cursor: "pointer" }}>
+              Week 1 {sortColumn === "week1" && (sortAsc ? "↑" : "↓")}
+            </th>
+            <th onClick={() => handleSort("finalGross")} style={{ cursor: "pointer" }}>
+              Final Gross {sortColumn === "finalGross" && (sortAsc ? "↑" : "↓")}
+            </th>
+            <th>Last Updated</th>
           </tr>
         </thead>
         <tbody>
-          {filteredData.map((entry, index) => (
+          {sortedData.map((entry, index) => (
             <tr key={index}>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>{entry.movie}</td>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>{entry.region}</td>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>{entry.area}</td>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>₹{entry.day1.toLocaleString()}</td>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>₹{entry.week1.toLocaleString()}</td>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>₹{entry.finalGross.toLocaleString()}</td>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>{entry.lastUpdated}</td>
+              <td className="highlight">{entry.movie}</td>
+              <td>{entry.region}</td>
+              <td>{entry.area}</td>
+              <td>₹{entry.day1.toLocaleString()}</td>
+              <td>₹{entry.week1.toLocaleString()}</td>
+              <td>₹{entry.finalGross.toLocaleString()}</td>
+              <td>{entry.lastUpdated}</td>
             </tr>
           ))}
         </tbody>
