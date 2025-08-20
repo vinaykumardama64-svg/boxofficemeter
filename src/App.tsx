@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./App.css";
 
 const JSON_URL =
-  "https://opensheet.elk.sh/1Xf3oggoei5OZIBQm76gIxDi8gQDwhwz-43dG7CfGCxQ/Sheet1"; // 🔁 Replace with your actual opensheet URL
+  "https://opensheet.elk.sh/1Xf3oggoei5OZIBQm76gIxDi8gQDwhwz-43dG7CfGCxQ/Sheet1"; // your updated sheet link
 
 interface MovieData {
   movie: string;
@@ -17,9 +17,9 @@ interface MovieData {
 function App() {
   const [data, setData] = useState<MovieData[]>([]);
   const [search, setSearch] = useState("");
-  const [selectedMovie, setSelectedMovie] = useState<string>("");
-  const [selectedRegion, setSelectedRegion] = useState<string>("");
-  const [selectedArea, setSelectedArea] = useState<string>("");
+  const [movieFilter, setMovieFilter] = useState("");
+  const [regionFilter, setRegionFilter] = useState("");
+  const [areaFilter, setAreaFilter] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,10 +31,10 @@ function App() {
           movie: row.movie,
           region: row.region,
           area: row.area,
-          day1: Number(row["day1"]) || 0,
-          week1: Number(row["week1"]) || 0,
-          finalGross: Number(row["final gross"]) || 0,
-          lastUpdated: row["last updated"] || "N/A",
+          day1: Number(row.day1) || 0,
+          week1: Number(row.week1) || 0,
+          finalGross: Number(row.finalGross) || 0,
+          lastUpdated: row.lastUpdated || "N/A",
         }));
 
         setData(cleanedData);
@@ -51,40 +51,56 @@ function App() {
   const uniqueAreas = Array.from(new Set(data.map((d) => d.area)));
 
   const filteredData = data.filter((entry) => {
-    return (
-      (selectedMovie === "" || entry.movie === selectedMovie) &&
-      (selectedRegion === "" || entry.region === selectedRegion) &&
-      (selectedArea === "" || entry.area === selectedArea)
-    );
+    const matchSearch = Object.values(entry)
+      .join(" ")
+      .toLowerCase()
+      .includes(search.toLowerCase());
+
+    const matchMovie = movieFilter ? entry.movie === movieFilter : true;
+    const matchRegion = regionFilter ? entry.region === regionFilter : true;
+    const matchArea = areaFilter ? entry.area === areaFilter : true;
+
+    return matchSearch && matchMovie && matchRegion && matchArea;
   });
 
   const totalDay1 = filteredData.reduce((sum, item) => sum + item.day1, 0);
   const totalWeek1 = filteredData.reduce((sum, item) => sum + item.week1, 0);
-  const totalGross = filteredData.reduce((sum, item) => sum + item.finalGross, 0);
+  const totalGross = filteredData.reduce(
+    (sum, item) => sum + item.finalGross,
+    0
+  );
 
   return (
     <div className="App">
       <h1>🎬 BoxOfficeTrack</h1>
 
-      <div style={{ marginBottom: "20px" }}>
-        <select value={selectedMovie} onChange={(e) => setSelectedMovie(e.target.value)}>
+      <input
+        type="text"
+        placeholder="Search by movie, region, area..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        style={{ marginBottom: "10px", padding: "6px", fontSize: "16px", width: "60%" }}
+      />
+
+      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+        <select value={movieFilter} onChange={(e) => setMovieFilter(e.target.value)}>
           <option value="">All Movies</option>
-          {uniqueMovies.map((movie, idx) => (
-            <option key={idx} value={movie}>{movie}</option>
+          {uniqueMovies.map((m, idx) => (
+            <option key={idx} value={m}>{m}</option>
           ))}
         </select>
 
-        <select value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)} style={{ marginLeft: 10 }}>
+        <select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)}>
           <option value="">All Regions</option>
-          {uniqueRegions.map((region, idx) => (
-            <option key={idx} value={region}>{region}</option>
+          {uniqueRegions.map((r, idx) => (
+            <option key={idx} value={r}>{r}</option>
           ))}
         </select>
 
-        <select value={selectedArea} onChange={(e) => setSelectedArea(e.target.value)} style={{ marginLeft: 10 }}>
+        <select value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
           <option value="">All Areas</option>
-          {uniqueAreas.map((area, idx) => (
-            <option key={idx} value={area}>{area}</option>
+          {uniqueAreas.map((a, idx) => (
+            <option key={idx} value={a}>{a}</option>
           ))}
         </select>
       </div>
