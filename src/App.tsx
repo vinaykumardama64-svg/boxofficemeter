@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
+
 const JSON_URL =
   "https://opensheet.elk.sh/1Xf3oggoei5OZIBQm76gIxDi8gQDwhwz-43dG7CfGCxQ/Sheet1";
 
@@ -16,11 +17,8 @@ interface MovieData {
 function App() {
   const [data, setData] = useState<MovieData[]>([]);
   const [search, setSearch] = useState("");
-  const [selectedMovies, setSelectedMovies] = useState<string[]>([]);
-  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
-  const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
-  const [sortColumn, setSortColumn] = useState<keyof MovieData>('finalGross');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortField, setSortField] = useState<keyof MovieData>("finalGross");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,48 +45,40 @@ function App() {
     fetchData();
   }, []);
 
-  const toggleSort = (column: keyof MovieData) => {
-    if (sortColumn === column) {
-      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortColumn(column);
-      setSortOrder('desc');
-    }
-  };
-
-  const filteredData = data.filter((entry) => {
-    const matchMovie = selectedMovies.length === 0 || selectedMovies.includes(entry.movie);
-    const matchRegion = selectedRegions.length === 0 || selectedRegions.includes(entry.region);
-    const matchArea = selectedAreas.length === 0 || selectedAreas.includes(entry.area);
-
-    return (
-      matchMovie &&
-      matchRegion &&
-      matchArea &&
-      Object.values(entry).join(" ").toLowerCase().includes(search.toLowerCase())
-    );
-  });
-
-  const sortedData = [...filteredData].sort((a, b) => {
-    const aValue = a[sortColumn];
-    const bValue = b[sortColumn];
-
-    if (typeof aValue === 'number' && typeof bValue === 'number') {
-      return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
-    }
-    return 0;
-  });
-
-  const uniqueMovies = Array.from(new Set(data.map((d) => d.movie)));
-  const uniqueRegions = Array.from(new Set(data.map((d) => d.region)));
-  const uniqueAreas = Array.from(new Set(data.map((d) => d.area)));
-
   const toIndianFormat = (num: number) =>
     new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(num);
 
-  const totalDay1 = filteredData.reduce((sum, item) => sum + item.day1, 0);
-  const totalWeek1 = filteredData.reduce((sum, item) => sum + item.week1, 0);
-  const totalFinal = filteredData.reduce((sum, item) => sum + item.finalGross, 0);
+  const sortedData = [...data]
+    .filter((entry) =>
+      Object.values(entry).join(" ").toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => {
+      const aValue = a[sortField];
+      const bValue = b[sortField];
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+      } else {
+        return sortDirection === "asc"
+          ? String(aValue).localeCompare(String(bValue))
+          : String(bValue).localeCompare(String(aValue));
+      }
+    });
+
+  const totalDay1 = sortedData.reduce((sum, item) => sum + item.day1, 0);
+  const totalWeek1 = sortedData.reduce((sum, item) => sum + item.week1, 0);
+  const totalFinal = sortedData.reduce((sum, item) => sum + item.finalGross, 0);
+
+  const handleSort = (field: keyof MovieData) => {
+    if (field === sortField) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection(
+        typeof data[0]?.[field] === "number" ? "desc" : "asc"
+      );
+    }
+  };
 
   return (
     <div className="App">
@@ -101,27 +91,6 @@ function App() {
         onChange={(e) => setSearch(e.target.value)}
         className="search-input"
       />
-
-      <div className="filters">
-        <MultiSelectDropdown
-          label="Movies"
-          options={uniqueMovies}
-          selected={selectedMovies}
-          onChange={setSelectedMovies}
-        />
-        <MultiSelectDropdown
-          label="Regions"
-          options={uniqueRegions}
-          selected={selectedRegions}
-          onChange={setSelectedRegions}
-        />
-        <MultiSelectDropdown
-          label="Areas"
-          options={uniqueAreas}
-          selected={selectedAreas}
-          onChange={setSelectedAreas}
-        />
-      </div>
 
       <div className="kpi-container">
         <div className="kpi-card">
@@ -138,20 +107,20 @@ function App() {
         </div>
         <div className="kpi-card">
           <h3>Entries</h3>
-          <p>{filteredData.length}</p>
+          <p>{sortedData.length}</p>
         </div>
       </div>
 
       <table>
         <thead>
           <tr>
-            <th>Movie</th>
-            <th>Region</th>
-            <th>Area</th>
-            <th onClick={() => toggleSort('day1')}>Day 1</th>
-            <th onClick={() => toggleSort('week1')}>Week 1</th>
-            <th onClick={() => toggleSort('finalGross')}>Final Gross</th>
-            <th>Last Updated</th>
+            <th onClick={() => handleSort("movie")}>Movie</th>
+            <th onClick={() => handleSort("region")}>Region</th>
+            <th onClick={() => handleSort("area")}>Area</th>
+            <th onClick={() => handleSort("day1")}>Day 1</th>
+            <th onClick={() => handleSort("week1")}>Week 1</th>
+            <th onClick={() => handleSort("finalGross")}>Final Gross</th>
+            <th onClick={() => handleSort("lastUpdated")}>Last Updated</th>
           </tr>
         </thead>
         <tbody>
