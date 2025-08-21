@@ -17,9 +17,9 @@ interface MovieData {
 function App() {
   const [data, setData] = useState<MovieData[]>([]);
   const [search, setSearch] = useState("");
-  const [movieFilter, setMovieFilter] = useState("");
-  const [regionFilter, setRegionFilter] = useState("");
-  const [areaFilter, setAreaFilter] = useState("");
+  const [movieFilter, setMovieFilter] = useState<string[]>([]);
+  const [regionFilter, setRegionFilter] = useState<string[]>([]);
+  const [areaFilter, setAreaFilter] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -48,9 +48,9 @@ function App() {
 
   const filteredData = data.filter((entry) => {
     return (
-      (!movieFilter || entry.movie === movieFilter) &&
-      (!regionFilter || entry.region === regionFilter) &&
-      (!areaFilter || entry.area === areaFilter) &&
+      (movieFilter.length === 0 || movieFilter.includes(entry.movie)) &&
+      (regionFilter.length === 0 || regionFilter.includes(entry.region)) &&
+      (areaFilter.length === 0 || areaFilter.includes(entry.area)) &&
       Object.values(entry).join(" ").toLowerCase().includes(search.toLowerCase())
     );
   });
@@ -75,22 +75,37 @@ function App() {
       />
 
       <div className="filters">
-        <select value={movieFilter} onChange={(e) => setMovieFilter(e.target.value)}>
-          <option value="">All Movies</option>
+        <select
+          multiple
+          value={movieFilter}
+          onChange={(e) =>
+            setMovieFilter(Array.from(e.target.selectedOptions, (opt) => opt.value))
+          }
+        >
           {uniqueMovies.map((movie) => (
             <option key={movie} value={movie}>{movie}</option>
           ))}
         </select>
 
-        <select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)}>
-          <option value="">All Regions</option>
+        <select
+          multiple
+          value={regionFilter}
+          onChange={(e) =>
+            setRegionFilter(Array.from(e.target.selectedOptions, (opt) => opt.value))
+          }
+        >
           {uniqueRegions.map((region) => (
             <option key={region} value={region}>{region}</option>
           ))}
         </select>
 
-        <select value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
-          <option value="">All Areas</option>
+        <select
+          multiple
+          value={areaFilter}
+          onChange={(e) =>
+            setAreaFilter(Array.from(e.target.selectedOptions, (opt) => opt.value))
+          }
+        >
           {uniqueAreas.map((area) => (
             <option key={area} value={area}>{area}</option>
           ))}
