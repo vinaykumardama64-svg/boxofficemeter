@@ -21,6 +21,8 @@ function App() {
   const [selectedMovies, setSelectedMovies] = useState<string[]>([]);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
+  const [sortColumn, setSortColumn] = useState<keyof MovieData>('finalGross');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,6 +49,15 @@ function App() {
     fetchData();
   }, []);
 
+  const toggleSort = (column: keyof MovieData) => {
+    if (sortColumn === column) {
+      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortColumn(column);
+      setSortOrder('desc');
+    }
+  };
+
   const filteredData = data.filter((entry) => {
     const matchMovie = selectedMovies.length === 0 || selectedMovies.includes(entry.movie);
     const matchRegion = selectedRegions.length === 0 || selectedRegions.includes(entry.region);
@@ -58,6 +69,16 @@ function App() {
       matchArea &&
       Object.values(entry).join(" ").toLowerCase().includes(search.toLowerCase())
     );
+  });
+
+  const sortedData = [...filteredData].sort((a, b) => {
+    const aValue = a[sortColumn];
+    const bValue = b[sortColumn];
+
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
+    }
+    return 0;
   });
 
   const uniqueMovies = Array.from(new Set(data.map((d) => d.movie)));
@@ -129,14 +150,14 @@ function App() {
             <th>Movie</th>
             <th>Region</th>
             <th>Area</th>
-            <th>Day 1</th>
-            <th>Week 1</th>
-            <th>Final Gross</th>
+            <th onClick={() => toggleSort('day1')}>Day 1</th>
+            <th onClick={() => toggleSort('week1')}>Week 1</th>
+            <th onClick={() => toggleSort('finalGross')}>Final Gross</th>
             <th>Last Updated</th>
           </tr>
         </thead>
         <tbody>
-          {filteredData.map((entry, index) => (
+          {sortedData.map((entry, index) => (
             <tr key={index}>
               <td>{entry.movie}</td>
               <td>{entry.region}</td>
