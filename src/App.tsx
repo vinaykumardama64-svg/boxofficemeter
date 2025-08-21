@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
+import MultiSelectDropdown from "./components/MultiSelectDropdown";
 
 const JSON_URL =
   "https://opensheet.elk.sh/1Xf3oggoei5OZIBQm76gIxDi8gQDwhwz-43dG7CfGCxQ/Sheet1";
@@ -17,9 +18,9 @@ interface MovieData {
 function App() {
   const [data, setData] = useState<MovieData[]>([]);
   const [search, setSearch] = useState("");
-  const [movieFilter, setMovieFilter] = useState<string[]>([]);
-  const [regionFilter, setRegionFilter] = useState<string[]>([]);
-  const [areaFilter, setAreaFilter] = useState<string[]>([]);
+  const [selectedMovies, setSelectedMovies] = useState<string[]>([]);
+  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
+  const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,10 +48,14 @@ function App() {
   }, []);
 
   const filteredData = data.filter((entry) => {
+    const matchMovie = selectedMovies.length === 0 || selectedMovies.includes(entry.movie);
+    const matchRegion = selectedRegions.length === 0 || selectedRegions.includes(entry.region);
+    const matchArea = selectedAreas.length === 0 || selectedAreas.includes(entry.area);
+
     return (
-      (movieFilter.length === 0 || movieFilter.includes(entry.movie)) &&
-      (regionFilter.length === 0 || regionFilter.includes(entry.region)) &&
-      (areaFilter.length === 0 || areaFilter.includes(entry.area)) &&
+      matchMovie &&
+      matchRegion &&
+      matchArea &&
       Object.values(entry).join(" ").toLowerCase().includes(search.toLowerCase())
     );
   });
@@ -58,6 +63,9 @@ function App() {
   const uniqueMovies = Array.from(new Set(data.map((d) => d.movie)));
   const uniqueRegions = Array.from(new Set(data.map((d) => d.region)));
   const uniqueAreas = Array.from(new Set(data.map((d) => d.area)));
+
+  const toIndianFormat = (num: number) =>
+    new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(num);
 
   const totalDay1 = filteredData.reduce((sum, item) => sum + item.day1, 0);
   const totalWeek1 = filteredData.reduce((sum, item) => sum + item.week1, 0);
@@ -72,58 +80,42 @@ function App() {
         placeholder="Search by movie, region, area..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
+        className="search-input"
       />
 
       <div className="filters">
-        <select
-          multiple
-          value={movieFilter}
-          onChange={(e) =>
-            setMovieFilter(Array.from(e.target.selectedOptions, (opt) => opt.value))
-          }
-        >
-          {uniqueMovies.map((movie) => (
-            <option key={movie} value={movie}>{movie}</option>
-          ))}
-        </select>
-
-        <select
-          multiple
-          value={regionFilter}
-          onChange={(e) =>
-            setRegionFilter(Array.from(e.target.selectedOptions, (opt) => opt.value))
-          }
-        >
-          {uniqueRegions.map((region) => (
-            <option key={region} value={region}>{region}</option>
-          ))}
-        </select>
-
-        <select
-          multiple
-          value={areaFilter}
-          onChange={(e) =>
-            setAreaFilter(Array.from(e.target.selectedOptions, (opt) => opt.value))
-          }
-        >
-          {uniqueAreas.map((area) => (
-            <option key={area} value={area}>{area}</option>
-          ))}
-        </select>
+        <MultiSelectDropdown
+          label="Movies"
+          options={uniqueMovies}
+          selected={selectedMovies}
+          onChange={setSelectedMovies}
+        />
+        <MultiSelectDropdown
+          label="Regions"
+          options={uniqueRegions}
+          selected={selectedRegions}
+          onChange={setSelectedRegions}
+        />
+        <MultiSelectDropdown
+          label="Areas"
+          options={uniqueAreas}
+          selected={selectedAreas}
+          onChange={setSelectedAreas}
+        />
       </div>
 
       <div className="kpi-container">
         <div className="kpi-card">
           <h3>Total Day 1</h3>
-          <p>₹{totalDay1.toLocaleString("en-IN")}</p>
+          <p>₹{toIndianFormat(totalDay1)}</p>
         </div>
         <div className="kpi-card">
           <h3>Total Week 1</h3>
-          <p>₹{totalWeek1.toLocaleString("en-IN")}</p>
+          <p>₹{toIndianFormat(totalWeek1)}</p>
         </div>
         <div className="kpi-card">
           <h3>Total Final Gross</h3>
-          <p>₹{totalFinal.toLocaleString("en-IN")}</p>
+          <p>₹{toIndianFormat(totalFinal)}</p>
         </div>
         <div className="kpi-card">
           <h3>Entries</h3>
@@ -149,9 +141,9 @@ function App() {
               <td>{entry.movie}</td>
               <td>{entry.region}</td>
               <td>{entry.area}</td>
-              <td>₹{entry.day1.toLocaleString("en-IN")}</td>
-              <td>₹{entry.week1.toLocaleString("en-IN")}</td>
-              <td>₹{entry.finalGross.toLocaleString("en-IN")}</td>
+              <td>₹{toIndianFormat(entry.day1)}</td>
+              <td>₹{toIndianFormat(entry.week1)}</td>
+              <td>₹{toIndianFormat(entry.finalGross)}</td>
               <td>{entry.lastUpdated}</td>
             </tr>
           ))}
