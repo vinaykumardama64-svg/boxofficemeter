@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import "./AppEnhanced.css";
+import "./App.css";
 
 const JSON_URL =
   "https://opensheet.elk.sh/1Xf3oggoei5OZIBQm76gIxDi8gQDwhwz-43dG7CfGCxQ/Sheet1";
