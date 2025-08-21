@@ -20,8 +20,10 @@ input[type="text"] {
   width: 60%;
   border-radius: 8px;
   border: 1px solid #ccc;
+  box-sizing: border-box;
 }
 
+/* Filters */
 .filters {
   display: flex;
   justify-content: center;
@@ -30,7 +32,6 @@ input[type="text"] {
   flex-wrap: wrap;
 }
 
-/* Dropdown Button Style */
 .filters select {
   appearance: none;
   padding: 10px 30px 10px 15px;
@@ -43,12 +44,11 @@ input[type="text"] {
   transition: 0.3s;
 }
 
-/* Dropdown Hover Effect */
 .filters select:hover {
   background-color: #f0f0f0;
 }
 
-/* KPI Totals Section */
+/* KPI Cards */
 .kpi-container {
   display: flex;
   justify-content: center;
@@ -64,6 +64,8 @@ input[type="text"] {
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
   text-align: center;
   min-width: 160px;
+  flex: 1;
+  max-width: 220px;
 }
 
 .kpi-card h3 {
@@ -95,7 +97,6 @@ th, td {
   font-size: 14px;
 }
 
-/* Header Row Styling */
 thead {
   background-color: skyblue;
   color: black;
@@ -111,15 +112,36 @@ tbody tr:hover {
   transition: background-color 0.2s;
 }
 
-/* Responsive */
+/* Responsive layout for mobile devices */
 @media screen and (max-width: 768px) {
-  .filters,
+  input[type="text"] {
+    width: 90%;
+  }
+
+  .filters {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .filters select {
+    width: 90%;
+    background-position: right 12px center;
+  }
+
   .kpi-container {
     flex-direction: column;
     align-items: center;
   }
 
-  input[type="text"] {
+  .kpi-card {
     width: 90%;
+    max-width: 95%;
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
   }
 }
