@@ -17,9 +17,8 @@ interface MovieData {
 function App() {
   const [data, setData] = useState<MovieData[]>([]);
   const [search, setSearch] = useState("");
-  const [movieFilter, setMovieFilter] = useState("");
-  const [regionFilter, setRegionFilter] = useState("");
-  const [areaFilter, setAreaFilter] = useState("");
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -33,8 +32,8 @@ function App() {
           area: row.area,
           day1: Number(row.day1) || 0,
           week1: Number(row.week1) || 0,
-          finalGross: Number(row.finalGross) || 0,
-          lastUpdated: row.lastUpdated || "N/A",
+          finalGross: Number(row["final gross"]) || 0,
+          lastUpdated: row["last updated"] || "N/A",
         }));
 
         setData(cleanedData);
@@ -46,99 +45,86 @@ function App() {
     fetchData();
   }, []);
 
-  const indianFormat = (num: number) =>
-    new Intl.NumberFormat("en-IN").format(num);
+  const filteredData = data.filter((entry) =>
+    Object.values(entry).join(" ").toLowerCase().includes(search.toLowerCase())
+  );
 
-  const filteredData = data.filter((entry) => {
-    return (
-      (!movieFilter || entry.movie === movieFilter) &&
-      (!regionFilter || entry.region === regionFilter) &&
-      (!areaFilter || entry.area === areaFilter) &&
-      Object.values(entry).join(" ").toLowerCase().includes(search.toLowerCase())
-    );
-  });
+  const sortedData = sortKey
+    ? [...filteredData].sort((a, b) => {
+        const aValue = a[sortKey as keyof MovieData] as number;
+        const bValue = b[sortKey as keyof MovieData] as number;
+        return sortOrder === "asc" ? aValue - bValue : bValue - aValue;
+      })
+    : filteredData;
 
-  const uniqueMovies = Array.from(new Set(data.map((item) => item.movie)));
-  const uniqueRegions = Array.from(new Set(data.map((item) => item.region)));
-  const uniqueAreas = Array.from(new Set(data.map((item) => item.area)));
+  const totalDay1 = sortedData.reduce((sum, item) => sum + item.day1, 0);
+  const totalWeek1 = sortedData.reduce((sum, item) => sum + item.week1, 0);
+  const totalGross = sortedData.reduce((sum, item) => sum + item.finalGross, 0);
 
-  const totalDay1 = filteredData.reduce((sum, item) => sum + item.day1, 0);
-  const totalWeek1 = filteredData.reduce((sum, item) => sum + item.week1, 0);
-  const totalGross = filteredData.reduce((sum, item) => sum + item.finalGross, 0);
+  const formatIndianNumber = (num: number): string => {
+    return new Intl.NumberFormat("en-IN").format(num);
+  };
+
+  const handleSort = (key: keyof MovieData) => {
+    if (sortKey === key) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortOrder("asc");
+    }
+  };
 
   return (
     <div className="App">
       <h1>🎬 BoxOfficeTrack</h1>
+      <input
+        type="text"
+        placeholder="Search by movie, region, area..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="search-bar"
+      />
 
-      <div className="filters">
-        <select onChange={(e) => setMovieFilter(e.target.value)} value={movieFilter}>
-          <option value="">All Movies</option>
-          {uniqueMovies.map((movie, index) => (
-            <option key={index} value={movie}>
-              {movie}
-            </option>
-          ))}
-        </select>
-        <select onChange={(e) => setRegionFilter(e.target.value)} value={regionFilter}>
-          <option value="">All Regions</option>
-          {uniqueRegions.map((region, index) => (
-            <option key={index} value={region}>
-              {region}
-            </option>
-          ))}
-        </select>
-        <select onChange={(e) => setAreaFilter(e.target.value)} value={areaFilter}>
-          <option value="">All Areas</option>
-          {uniqueAreas.map((area, index) => (
-            <option key={index} value={area}>
-              {area}
-            </option>
-          ))}
-        </select>
-        <input
-          type="text"
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      <div className="totals">
+      <div className="totals-row">
         <div className="total-box">
-          <h4>Total Day 1</h4>
-          <p>₹{indianFormat(totalDay1)}</p>
+          <h3>Total Day 1</h3>
+          <p>₹{formatIndianNumber(totalDay1)}</p>
         </div>
         <div className="total-box">
-          <h4>Total Week 1</h4>
-          <p>₹{indianFormat(totalWeek1)}</p>
+          <h3>Total Week 1</h3>
+          <p>₹{formatIndianNumber(totalWeek1)}</p>
         </div>
         <div className="total-box">
-          <h4>Total Final Gross</h4>
-          <p>₹{indianFormat(totalGross)}</p>
+          <h3>Total Final Gross</h3>
+          <p>₹{formatIndianNumber(totalGross)}</p>
+        </div>
+        <div className="total-box">
+          <h3>Total Entries</h3>
+          <p>{sortedData.length}</p>
         </div>
       </div>
 
-      <table className="data-table">
+      <table>
         <thead>
           <tr>
             <th>Movie</th>
             <th>Region</th>
             <th>Area</th>
-            <th>Day 1</th>
-            <th>Week 1</th>
-            <th>Final Gross</th>
+            <th onClick={() => handleSort("day1")}>Day 1 ⬍</th>
+            <th onClick={() => handleSort("week1")}>Week 1 ⬍</th>
+            <th onClick={() => handleSort("finalGross")}>Final Gross ⬍</th>
             <th>Last Updated</th>
           </tr>
         </thead>
         <tbody>
-          {filteredData.map((entry, index) => (
+          {sortedData.map((entry, index) => (
             <tr key={index}>
               <td>{entry.movie}</td>
               <td>{entry.region}</td>
               <td>{entry.area}</td>
-              <td>₹{indianFormat(entry.day1)}</td>
-              <td>₹{indianFormat(entry.week1)}</td>
-              <td>₹{indianFormat(entry.finalGross)}</td>
+              <td>₹{formatIndianNumber(entry.day1)}</td>
+              <td>₹{formatIndianNumber(entry.week1)}</td>
+              <td>₹{formatIndianNumber(entry.finalGross)}</td>
               <td>{entry.lastUpdated}</td>
             </tr>
           ))}
