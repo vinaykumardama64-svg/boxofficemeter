@@ -100,15 +100,15 @@ function App() {
       <div className="kpi-container">
         <div className="kpi-card">
           <h3>Total Day 1</h3>
-          <p>₹{totalDay1.toLocaleString()}</p>
+          <p>₹{totalDay1.toLocaleString("en-IN")}</p>
         </div>
         <div className="kpi-card">
           <h3>Total Week 1</h3>
-          <p>₹{totalWeek1.toLocaleString()}</p>
+          <p>₹{totalWeek1.toLocaleString("en-IN")}</p>
         </div>
         <div className="kpi-card">
           <h3>Total Final Gross</h3>
-          <p>₹{totalFinal.toLocaleString()}</p>
+          <p>₹{totalFinal.toLocaleString("en-IN")}</p>
         </div>
         <div className="kpi-card">
           <h3>Entries</h3>
@@ -134,9 +134,9 @@ function App() {
               <td>{entry.movie}</td>
               <td>{entry.region}</td>
               <td>{entry.area}</td>
-              <td>₹{entry.day1.toLocaleString()}</td>
-              <td>₹{entry.week1.toLocaleString()}</td>
-              <td>₹{entry.finalGross.toLocaleString()}</td>
+              <td>₹{entry.day1.toLocaleString("en-IN")}</td>
+              <td>₹{entry.week1.toLocaleString("en-IN")}</td>
+              <td>₹{entry.finalGross.toLocaleString("en-IN")}</td>
               <td>{entry.lastUpdated}</td>
             </tr>
           ))}
