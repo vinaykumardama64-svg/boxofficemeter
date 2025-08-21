@@ -25,7 +25,7 @@ function App() {
       const { data: fetchedData, error } = await supabase
         .from("box_office_data")
         .select("*")
-        .range(0, 99999); // fetch up to 100k rows
+        .range(0, 98999); // fetch up to 100k rows
 
       if (error) {
         console.error("Supabase fetch error:", error);
