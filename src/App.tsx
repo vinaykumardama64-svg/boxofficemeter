@@ -17,8 +17,9 @@ interface MovieData {
 function App() {
   const [data, setData] = useState<MovieData[]>([]);
   const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<string | null>(null);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [movieFilter, setMovieFilter] = useState("");
+  const [regionFilter, setRegionFilter] = useState("");
+  const [areaFilter, setAreaFilter] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,62 +46,73 @@ function App() {
     fetchData();
   }, []);
 
-  const filteredData = data.filter((entry) =>
-    Object.values(entry).join(" ").toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredData = data.filter((entry) => {
+    return (
+      (!movieFilter || entry.movie === movieFilter) &&
+      (!regionFilter || entry.region === regionFilter) &&
+      (!areaFilter || entry.area === areaFilter) &&
+      Object.values(entry).join(" ").toLowerCase().includes(search.toLowerCase())
+    );
+  });
 
-  const sortedData = sortKey
-    ? [...filteredData].sort((a, b) => {
-        const aValue = a[sortKey as keyof MovieData] as number;
-        const bValue = b[sortKey as keyof MovieData] as number;
-        return sortOrder === "asc" ? aValue - bValue : bValue - aValue;
-      })
-    : filteredData;
+  const uniqueMovies = Array.from(new Set(data.map((d) => d.movie)));
+  const uniqueRegions = Array.from(new Set(data.map((d) => d.region)));
+  const uniqueAreas = Array.from(new Set(data.map((d) => d.area)));
 
-  const totalDay1 = sortedData.reduce((sum, item) => sum + item.day1, 0);
-  const totalWeek1 = sortedData.reduce((sum, item) => sum + item.week1, 0);
-  const totalGross = sortedData.reduce((sum, item) => sum + item.finalGross, 0);
-
-  const formatIndianNumber = (num: number): string => {
-    return new Intl.NumberFormat("en-IN").format(num);
-  };
-
-  const handleSort = (key: keyof MovieData) => {
-    if (sortKey === key) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortKey(key);
-      setSortOrder("asc");
-    }
-  };
+  const totalDay1 = filteredData.reduce((sum, item) => sum + item.day1, 0);
+  const totalWeek1 = filteredData.reduce((sum, item) => sum + item.week1, 0);
+  const totalFinal = filteredData.reduce((sum, item) => sum + item.finalGross, 0);
 
   return (
     <div className="App">
       <h1>🎬 BoxOfficeTrack</h1>
+
       <input
         type="text"
         placeholder="Search by movie, region, area..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="search-bar"
       />
 
-      <div className="totals-row">
-        <div className="total-box">
+      <div className="filters">
+        <select value={movieFilter} onChange={(e) => setMovieFilter(e.target.value)}>
+          <option value="">All Movies</option>
+          {uniqueMovies.map((movie) => (
+            <option key={movie} value={movie}>{movie}</option>
+          ))}
+        </select>
+
+        <select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)}>
+          <option value="">All Regions</option>
+          {uniqueRegions.map((region) => (
+            <option key={region} value={region}>{region}</option>
+          ))}
+        </select>
+
+        <select value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
+          <option value="">All Areas</option>
+          {uniqueAreas.map((area) => (
+            <option key={area} value={area}>{area}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="kpi-container">
+        <div className="kpi-card">
           <h3>Total Day 1</h3>
-          <p>₹{formatIndianNumber(totalDay1)}</p>
+          <p>₹{totalDay1.toLocaleString()}</p>
         </div>
-        <div className="total-box">
+        <div className="kpi-card">
           <h3>Total Week 1</h3>
-          <p>₹{formatIndianNumber(totalWeek1)}</p>
+          <p>₹{totalWeek1.toLocaleString()}</p>
         </div>
-        <div className="total-box">
+        <div className="kpi-card">
           <h3>Total Final Gross</h3>
-          <p>₹{formatIndianNumber(totalGross)}</p>
+          <p>₹{totalFinal.toLocaleString()}</p>
         </div>
-        <div className="total-box">
-          <h3>Total Entries</h3>
-          <p>{sortedData.length}</p>
+        <div className="kpi-card">
+          <h3>Entries</h3>
+          <p>{filteredData.length}</p>
         </div>
       </div>
 
@@ -110,21 +122,21 @@ function App() {
             <th>Movie</th>
             <th>Region</th>
             <th>Area</th>
-            <th onClick={() => handleSort("day1")}>Day 1 ⬍</th>
-            <th onClick={() => handleSort("week1")}>Week 1 ⬍</th>
-            <th onClick={() => handleSort("finalGross")}>Final Gross ⬍</th>
+            <th>Day 1</th>
+            <th>Week 1</th>
+            <th>Final Gross</th>
             <th>Last Updated</th>
           </tr>
         </thead>
         <tbody>
-          {sortedData.map((entry, index) => (
+          {filteredData.map((entry, index) => (
             <tr key={index}>
               <td>{entry.movie}</td>
               <td>{entry.region}</td>
               <td>{entry.area}</td>
-              <td>₹{formatIndianNumber(entry.day1)}</td>
-              <td>₹{formatIndianNumber(entry.week1)}</td>
-              <td>₹{formatIndianNumber(entry.finalGross)}</td>
+              <td>₹{entry.day1.toLocaleString()}</td>
+              <td>₹{entry.week1.toLocaleString()}</td>
+              <td>₹{entry.finalGross.toLocaleString()}</td>
               <td>{entry.lastUpdated}</td>
             </tr>
           ))}
