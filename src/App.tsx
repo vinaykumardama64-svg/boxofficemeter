@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import "./App.css";
+import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 interface MovieData {
   id: number;
@@ -19,44 +20,80 @@ interface MovieData {
 
 function App() {
   const [data, setData] = useState<MovieData[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [sortField, setSortField] = useState<string>("final_gross");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const { data: fetchedData, error } = await supabase
-        .from("box_office_data")
-        .select("*")
-        .order(sortField, { ascending: sortOrder === "asc" })
-        .limit(200000);
-
-      if (error) {
-        console.error("Error fetching data:", error);
-      } else {
-        setData(fetchedData || []);
-      }
-      setLoading(false);
-    };
-
-    fetchData();
-  }, [sortField, sortOrder]);
-
-  const filteredData = data.filter((entry) =>
-    Object.values(entry).join(" ").toLowerCase().includes(search.toLowerCase())
-  );
+  const [movies, setMovies] = useState<string[]>([]);
+  const [regions, setRegions] = useState<string[]>([]);
+  const [areas, setAreas] = useState<string[]>([]);
+  const [selectedMovie, setSelectedMovie] = useState("");
+  const [selectedRegion, setSelectedRegion] = useState("");
+  const [selectedArea, setSelectedArea] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [sortField, setSortField] = useState<keyof MovieData | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const toIndianFormat = (num: number) =>
     new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(num);
 
-  const totalDay1 = filteredData.reduce((sum, item) => sum + item.day1, 0);
-  const totalWeek1 = filteredData.reduce((sum, item) => sum + item.week1, 0);
-  const totalFinal = filteredData.reduce((sum, item) => sum + item.final_gross, 0);
+  const fetchFilters = async () => {
+    const [movieData, regionData, areaData] = await Promise.all([
+      supabase.from("box_office_data").select("movie"),
+      supabase.from("box_office_data").select("region"),
+      supabase.from("box_office_data").select("area"),
+    ]);
+
+    if (movieData.data) setMovies([...new Set(movieData.data.map((d) => d.movie))]);
+    if (regionData.data) setRegions([...new Set(regionData.data.map((d) => d.region))]);
+    if (areaData.data) setAreas([...new Set(areaData.data.map((d) => d.area))]);
+  };
+
+  const fetchData = async () => {
+    setLoading(true);
+    let query = supabase.from("box_office_data").select("*").limit(10000);
+
+    if (selectedMovie) query = query.eq("movie", selectedMovie);
+    if (selectedRegion) query = query.eq("region", selectedRegion);
+    if (selectedArea) query = query.eq("area", selectedArea);
+
+    const { data: fetchedData, error } = await query;
+    if (fetchedData) setData(fetchedData);
+    if (error) console.error("Could not fetch data:", error);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchFilters();
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [selectedMovie, selectedRegion, selectedArea]);
+
+  let filteredData = data.filter((entry) =>
+    Object.values(entry)
+      .join(" ")
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  );
+
+  if (sortField) {
+    filteredData = filteredData.sort((a, b) => {
+      const aVal = a[sortField];
+      const bVal = b[sortField];
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+      }
+      return sortOrder === "asc"
+        ? String(aVal).localeCompare(String(bVal))
+        : String(bVal).localeCompare(String(aVal));
+    });
+  }
+
+  const totalDay1 = filteredData.reduce((sum, d) => sum + (d.day1 || 0), 0);
+  const totalWeek1 = filteredData.reduce((sum, d) => sum + (d.week1 || 0), 0);
+  const totalFinal = filteredData.reduce((sum, d) => sum + (d.final_gross || 0), 0);
 
   const handleSort = (field: keyof MovieData) => {
-    if (field === sortField) {
+    if (sortField === field) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
@@ -70,11 +107,34 @@ function App() {
 
       <input
         type="text"
-        placeholder="Search by movie, region, area..."
+        placeholder="Search movie / region / area..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="search-input"
       />
+
+      <div className="filters">
+        <select value={selectedMovie} onChange={(e) => setSelectedMovie(e.target.value)}>
+          <option value="">Movie (exact)</option>
+          {movies.map((m) => (
+            <option key={m} value={m}>{m}</option>
+          ))}
+        </select>
+
+        <select value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)}>
+          <option value="">Region (exact)</option>
+          {regions.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
+
+        <select value={selectedArea} onChange={(e) => setSelectedArea(e.target.value)}>
+          <option value="">Area (exact)</option>
+          {areas.map((a) => (
+            <option key={a} value={a}>{a}</option>
+          ))}
+        </select>
+      </div>
 
       <div className="kpi-container">
         <div className="kpi-card">
@@ -90,13 +150,13 @@ function App() {
           <p>₹{toIndianFormat(totalFinal)}</p>
         </div>
         <div className="kpi-card">
-          <h3>Entries</h3>
+          <h3>Entries (loaded)</h3>
           <p>{filteredData.length}</p>
         </div>
       </div>
 
       {loading ? (
-        <div className="loading-spinner"></div>
+        <div className="spinner"></div>
       ) : (
         <table>
           <thead>
@@ -112,7 +172,7 @@ function App() {
           </thead>
           <tbody>
             {filteredData.map((entry) => (
-              <tr key={entry.id} className="highlight-row">
+              <tr key={entry.id} className={search ? "highlight" : ""}>
                 <td>{entry.movie}</td>
                 <td>{entry.region}</td>
                 <td>{entry.area}</td>
