@@ -1,10 +1,17 @@
+// App.tsx
 import React, { useEffect, useState } from "react";
 import "./App.css";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = "https://iywdsnvicsgwdwuoqvbz.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5d2RzbnZpY3Nnd2R3dW9xdmJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4MDI0NDgsImV4cCI6MjA3MTM3ODQ0OH0.Epn3h-VXcTBKPXKo8Y_xW3gTzBH6HY15VdksWyPjg3M";
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseKey = "YOUR_ANON_KEY_HERE"; // or env vars
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false,        // <- critical for mobile/private mode
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+  },
+});
 
 interface MovieData {
   movie: string;
@@ -16,103 +23,83 @@ interface MovieData {
   lastUpdated: string;
 }
 
-function App() {
+const toINR = (n: number) =>
+  (Intl && Intl.NumberFormat
+    ? new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(n)
+    : Math.round(n).toLocaleString());
+
+export default function App() {
   const [data, setData] = useState<MovieData[]>([]);
-  const [search, setSearch] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      const { data: fetchedData, error } = await supabase
-     .from("box_office_data")
-     .select("*")
-     .order("id", { ascending: true })
-    .range(0, 99999);
-// fetch up to 100k rows
+    (async () => {
+      try {
+        const { data: rows, error } = await supabase
+          .from("box_office_data")
+          .select("*")
+          .order("id", { ascending: true }) // stable ordering helps with large ranges
+          .range(0, 200000);                 // you raised API limit to 200000
 
-      if (error) {
-        console.error("Supabase fetch error:", error);
-        return;
+        if (error) throw error;
+
+        const cleaned = (rows || []).map((r: any) => ({
+          movie: r.movie,
+          region: r.region,
+          area: r.area,
+          day1: Number(r.day1) || 0,
+          week1: Number(r.week1) || 0,
+          finalGross: Number(r.final_gross ?? r["final gross"]) || 0,
+          lastUpdated: r.last_updated ?? r["last updated"] ?? "N/A",
+        }));
+
+        setData(cleaned);
+        setError(null);
+      } catch (e: any) {
+        console.error("Supabase fetch failed:", e);
+        setError(e?.message || "Failed to load data");
       }
-
-      const cleanedData: MovieData[] = fetchedData.map((row: any) => ({
-        movie: row.movie,
-        region: row.region,
-        area: row.area,
-        day1: Number(row.day1) || 0,
-        week1: Number(row.week1) || 0,
-        finalGross: Number(row["final gross"]) || 0,
-        lastUpdated: row["last updated"] || "N/A",
-      }));
-
-      setData(cleanedData);
-    };
-
-    fetchData();
+    })();
   }, []);
 
-  const toIndianFormat = (num: number) =>
-    new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(num);
-
-  const filteredData = data.filter((entry) =>
-    Object.values(entry).join(" ").toLowerCase().includes(search.toLowerCase())
-  );
-
-  const totalDay1 = filteredData.reduce((sum, item) => sum + item.day1, 0);
-  const totalWeek1 = filteredData.reduce((sum, item) => sum + item.week1, 0);
-  const totalFinal = filteredData.reduce((sum, item) => sum + item.finalGross, 0);
+  const totalDay1 = data.reduce((s, d) => s + d.day1, 0);
+  const totalWeek1 = data.reduce((s, d) => s + d.week1, 0);
+  const totalFinal = data.reduce((s, d) => s + d.finalGross, 0);
 
   return (
     <div className="App">
       <h1>🎬 BoxOfficeTrack</h1>
-      <input
-        type="text"
-        placeholder="Search by movie, region, area..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="search-input"
-      />
+
+      {error && (
+        <div style={{background:"#ffe8e8",border:"1px solid #ffb3b3",padding:"10px",borderRadius:8,marginBottom:12}}>
+          <strong>Couldn’t load data.</strong> {error}
+        </div>
+      )}
 
       <div className="kpi-container">
-        <div className="kpi-card">
-          <h3>Total Day 1</h3>
-          <p>₹{toIndianFormat(totalDay1)}</p>
-        </div>
-        <div className="kpi-card">
-          <h3>Total Week 1</h3>
-          <p>₹{toIndianFormat(totalWeek1)}</p>
-        </div>
-        <div className="kpi-card">
-          <h3>Total Final Gross</h3>
-          <p>₹{toIndianFormat(totalFinal)}</p>
-        </div>
-        <div className="kpi-card">
-          <h3>Entries</h3>
-          <p>{filteredData.length}</p>
-        </div>
+        <div className="kpi-card"><h3>Total Day 1</h3><p>₹{toINR(totalDay1)}</p></div>
+        <div className="kpi-card"><h3>Total Week 1</h3><p>₹{toINR(totalWeek1)}</p></div>
+        <div className="kpi-card"><h3>Total Final Gross</h3><p>₹{toINR(totalFinal)}</p></div>
+        <div className="kpi-card"><h3>Entries</h3><p>{data.length}</p></div>
       </div>
 
       <table>
         <thead>
           <tr>
-            <th>Movie</th>
-            <th>Region</th>
-            <th>Area</th>
-            <th>Day 1</th>
-            <th>Week 1</th>
-            <th>Final Gross</th>
-            <th>Last Updated</th>
+            <th>Movie</th><th>Region</th><th>Area</th>
+            <th>Day 1</th><th>Week 1</th><th>Final Gross</th><th>Last Updated</th>
           </tr>
         </thead>
         <tbody>
-          {filteredData.map((entry, index) => (
-            <tr key={index}>
-              <td>{entry.movie}</td>
-              <td>{entry.region}</td>
-              <td>{entry.area}</td>
-              <td>₹{toIndianFormat(entry.day1)}</td>
-              <td>₹{toIndianFormat(entry.week1)}</td>
-              <td>₹{toIndianFormat(entry.finalGross)}</td>
-              <td>{entry.lastUpdated}</td>
+          {data.map((d, i) => (
+            <tr key={i}>
+              <td>{d.movie}</td>
+              <td>{d.region}</td>
+              <td>{d.area}</td>
+              <td>₹{toINR(d.day1)}</td>
+              <td>₹{toINR(d.week1)}</td>
+              <td>₹{toINR(d.finalGross)}</td>
+              <td>{d.lastUpdated}</td>
             </tr>
           ))}
         </tbody>
@@ -120,5 +107,3 @@ function App() {
     </div>
   );
 }
-
-export default App;
