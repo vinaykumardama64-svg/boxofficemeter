@@ -301,62 +301,45 @@ function App() {
         </ResponsiveContainer>
       </div>
      {/* Chart 2: Exact Titles Aggregated */}
-<h2 style={{ textAlign: "center", marginTop: "2rem" }}>Title-Specific Comparison</h2>
-<div style={{ width: "100%", height: 500 }}>
-  <ResponsiveContainer width="100%" height="100%">
-    <BarChart
-      data={Object.values(
-        sortedData.reduce((acc, item) => {
-          if (!acc[item.movie]) {
-            acc[item.movie] = {
-              movie: item.movie,
-              day1: 0,
-              week1: 0,
-              final: 0,
-            };
-          }
-          acc[item.movie].day1 += item.day1 || 0;
-          acc[item.movie].week1 += item.week1 || 0;
-          acc[item.movie].final += item.final_gross || 0;
-          return acc;
-        }, {} as Record<string, { movie: string; day1: number; week1: number; final: number }>)
-      )
-        .sort((a, b) => b.final - a.final)
-        .slice(0, 20)}
-      layout="vertical"
-      margin={{ top: 20, right: 30, left: 100, bottom: 5 }}
-    >
-      <XAxis
-        type="number"
-        tickFormatter={(value) => `₹${(value / 10000000).toFixed(1)} Cr`}
-      />
-      <YAxis dataKey="movie" type="category" width={150} />
-      <Tooltip formatter={(value: any) => `₹${(value / 10000000).toFixed(2)} Cr`} />
-      <Legend />
-      <Bar dataKey="day1" fill="#ffc107" name="Day 1">
-        <LabelList
-          dataKey="day1"
-          position="right"
-          formatter={(value: any) => `${(value / 10000000).toFixed(1)} Cr`}
-        />
-      </Bar>
-      <Bar dataKey="week1" fill="#0d6efd" name="Week 1">
-        <LabelList
-          dataKey="week1"
-          position="right"
-          formatter={(value: any) => `${(value / 10000000).toFixed(1)} Cr`}
-        />
-      </Bar>
-      <Bar dataKey="final" fill="#198754" name="Final Gross">
-        <LabelList
-          dataKey="final"
-          position="right"
-          formatter={(value: any) => `${(value / 10000000).toFixed(1)} Cr`}
-        />
-      </Bar>
-    </BarChart>
-  </ResponsiveContainer>
-</div>
+<h2 style={{ textAlign: "center", marginTop: "2rem" }}>Title-Specific Totals</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Movie</th>
+      <th>Day 1</th>
+      <th>Week 1</th>
+      <th>Final Gross</th>
+    </tr>
+  </thead>
+  <tbody>
+    {Object.values(
+      sortedData.reduce((acc, item) => {
+        if (!acc[item.movie]) {
+          acc[item.movie] = {
+            movie: item.movie,
+            day1: 0,
+            week1: 0,
+            final: 0,
+          };
+        }
+        acc[item.movie].day1 += item.day1 || 0;
+        acc[item.movie].week1 += item.week1 || 0;
+        acc[item.movie].final += item.final_gross || 0;
+        return acc;
+      }, {} as Record<string, { movie: string; day1: number; week1: number; final: number }>)
+    )
+      .sort((a, b) => b.final - a.final)
+      .slice(0, 20)
+      .map((entry, i) => (
+        <tr key={i}>
+          <td>{entry.movie}</td>
+          <td>₹{(entry.day1 / 10000000).toFixed(2)} Cr</td>
+          <td>₹{(entry.week1 / 10000000).toFixed(2)} Cr</td>
+          <td>₹{(entry.final / 10000000).toFixed(2)} Cr</td>
+        </tr>
+      ))}
+  </tbody>
+</table>
 </div>
   );
 }
