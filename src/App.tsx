@@ -128,7 +128,9 @@ function App() {
       acc[item.movie].final += item.final_gross || 0;
       return acc;
     }, {} as Record<string, { movie: string; day1: number; week1: number; final: number }>)
-  ).sort((a, b) => b.final - a.final).slice(0, 10);
+  )
+    .sort((a, b) => b.final - a.final)
+    .slice(0, 10);
 
   return (
     <div className="App">
@@ -186,22 +188,6 @@ function App() {
         </div>
       </div>
 
-      <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Top 10 Movies Comparison</h2>
-      <div style={{ width: "100%", height: 400 }}>
-        <ResponsiveContainer>
-          <BarChart data={movieComparison} margin={{ left: 50 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="movie" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="day1" fill="#ffc107" name="Day 1" />
-            <Bar dataKey="week1" fill="#0d6efd" name="Week 1" />
-            <Bar dataKey="final" fill="#198754" name="Final Gross" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
       <table>
         <thead>
           <tr>
@@ -241,6 +227,22 @@ function App() {
           </button>
         </div>
       )}
+
+      <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Top 10 Movies Comparison</h2>
+      <div style={{ width: "100%", height: 400 }}>
+        <ResponsiveContainer>
+          <BarChart data={movieComparison} margin={{ left: 50 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="movie" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="day1" fill="#ffc107" name="Day 1" />
+            <Bar dataKey="week1" fill="#0d6efd" name="Week 1" />
+            <Bar dataKey="final" fill="#198754" name="Final Gross" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
