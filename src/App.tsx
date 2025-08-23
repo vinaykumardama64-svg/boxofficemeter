@@ -30,6 +30,11 @@ interface MovieData {
   last_updated: string;
 }
 
+function getBaseTitle(movie: string): string {
+  const match = movie.match(/^(.*?)(\s*\(.*\))?$/);
+  return match ? match[1].trim() : movie;
+}
+
 function App() {
   const [data, setData] = useState<MovieData[]>([]);
   const [search, setSearch] = useState("");
@@ -121,12 +126,13 @@ function App() {
 
   const movieComparison = Object.values(
     filteredData.reduce((acc, item) => {
-      if (!acc[item.movie]) {
-        acc[item.movie] = { movie: item.movie, day1: 0, week1: 0, final: 0 };
+      const baseTitle = getBaseTitle(item.movie);
+      if (!acc[baseTitle]) {
+        acc[baseTitle] = { movie: baseTitle, day1: 0, week1: 0, final: 0 };
       }
-      acc[item.movie].day1 += item.day1 || 0;
-      acc[item.movie].week1 += item.week1 || 0;
-      acc[item.movie].final += item.final_gross || 0;
+      acc[baseTitle].day1 += item.day1 || 0;
+      acc[baseTitle].week1 += item.week1 || 0;
+      acc[baseTitle].final += item.final_gross || 0;
       return acc;
     }, {} as Record<string, { movie: string; day1: number; week1: number; final: number }>)
   ).sort((a, b) => b.final - a.final).slice(0, 10);
