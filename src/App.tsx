@@ -62,31 +62,23 @@ function App() {
   };
 
   const fetchData = async () => {
-    let query = supabase.from("box_office_data").select("*").limit(10000);
-
-    if (selectedMovies.length > 0)
-      query = query.in("movie", selectedMovies.map((s) => s.value));
-    if (selectedRegions.length > 0)
-      query = query.in("region", selectedRegions.map((s) => s.value));
-    if (selectedAreas.length > 0)
-      query = query.in("area", selectedAreas.map((s) => s.value));
-
-    const { data: fetchedData, error } = await query;
+    const { data: fetchedData, error } = await supabase.from("box_office_data").select("*").limit(10000);
     if (fetchedData) setData(fetchedData);
     if (error) console.error("Could not fetch data:", error);
   };
 
   useEffect(() => {
     fetchFilters();
+    fetchData();
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [selectedMovies, selectedRegions, selectedAreas]);
-
-  const filteredData = data.filter((entry) =>
-    Object.values(entry).join(" ").toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredData = data.filter((entry) => {
+    const movieMatch = selectedMovies.length === 0 || selectedMovies.some((m) => m.value === entry.movie);
+    const regionMatch = selectedRegions.length === 0 || selectedRegions.some((r) => r.value === entry.region);
+    const areaMatch = selectedAreas.length === 0 || selectedAreas.some((a) => a.value === entry.area);
+    const searchMatch = Object.values(entry).join(" ").toLowerCase().includes(search.toLowerCase());
+    return movieMatch && regionMatch && areaMatch && searchMatch;
+  });
 
   const sortedData = [...filteredData].sort((a, b) => {
     if (!sortColumn) return 0;
