@@ -275,32 +275,44 @@ function App() {
         </div>
       )}
 
-      <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Top Movie Comparison</h2>
-      <div style={{ width: "100%", height: 500 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={groupedByBaseTitle.slice(0, 20)}
-            layout="vertical"
-            margin={{ top: 20, right: 30, left: 100, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" />
-            <YAxis dataKey="movie" type="category" width={150} />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="day1" fill="#ffc107" name="Day 1">
-              <LabelList dataKey="day1" position="right" />
-            </Bar>
-            <Bar dataKey="week1" fill="#0d6efd" name="Week 1">
-              <LabelList dataKey="week1" position="right" />
-            </Bar>
-            <Bar dataKey="final" fill="#198754" name="Final Gross">
-              <LabelList dataKey="final" position="right" />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-     {/* Chart 2: Exact Titles Aggregated */}
+  <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Top Movie Comparison (Grouped)</h2>
+<div style={{ width: "100%", height: 500 }}>
+  <ResponsiveContainer width="100%" height="100%">
+    <BarChart
+      data={groupedByBaseTitle.slice(0, 20)}
+      layout="vertical"
+      margin={{ top: 20, right: 30, left: 100, bottom: 5 }}
+    >
+      <XAxis type="number" />
+      <YAxis dataKey="movie" type="category" width={150} />
+      <Tooltip
+        formatter={(value: number) => [`₹${(value / 10000000).toFixed(2)} Cr`, ""]}
+      />
+      <Legend />
+      <Bar dataKey="day1" fill="#ffc107" name="Day 1">
+        <LabelList
+          dataKey="day1"
+          position="right"
+          formatter={(val: number) => `${(val / 10000000).toFixed(2)} Cr`}
+        />
+      </Bar>
+      <Bar dataKey="week1" fill="#ff5722" name="Week 1">
+        <LabelList
+          dataKey="week1"
+          position="right"
+          formatter={(val: number) => `${(val / 10000000).toFixed(2)} Cr`}
+        />
+      </Bar>
+      <Bar dataKey="final" fill="#198754" name="Final Gross">
+        <LabelList
+          dataKey="final"
+          position="right"
+          formatter={(val: number) => `${(val / 10000000).toFixed(2)} Cr`}
+        />
+      </Bar>
+    </BarChart>
+  </ResponsiveContainer>
+</div>
 <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Title-Specific Totals</h2>
 <table>
   <thead>
