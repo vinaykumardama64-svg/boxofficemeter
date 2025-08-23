@@ -253,7 +253,8 @@ function App() {
     </BarChart>
   </ResponsiveContainer>
 </div>
-</div>  {/* Closing main App div */}
+{/* Closing main App div */}
+</div> 
 );
 }
 
