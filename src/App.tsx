@@ -118,15 +118,17 @@ function App() {
     }
   };
 
-  const top10Regions = Object.entries(
+  const movieComparison = Object.values(
     filteredData.reduce((acc, item) => {
-      acc[item.region] = (acc[item.region] || 0) + (item.final_gross || 0);
+      if (!acc[item.movie]) {
+        acc[item.movie] = { movie: item.movie, day1: 0, week1: 0, final: 0 };
+      }
+      acc[item.movie].day1 += item.day1 || 0;
+      acc[item.movie].week1 += item.week1 || 0;
+      acc[item.movie].final += item.final_gross || 0;
       return acc;
-    }, {} as Record<string, number>)
-  )
-    .map(([region, total]) => ({ region, total }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 10);
+    }, {} as Record<string, { movie: string; day1: number; week1: number; final: number }>)
+  ).sort((a, b) => b.final - a.final).slice(0, 10);
 
   return (
     <div className="App">
@@ -184,16 +186,18 @@ function App() {
         </div>
       </div>
 
-      <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Top 10 Regions by Final Gross</h2>
+      <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Top 10 Movies Comparison</h2>
       <div style={{ width: "100%", height: 400 }}>
         <ResponsiveContainer>
-          <BarChart data={top10Regions} layout="vertical" margin={{ left: 80 }}>
+          <BarChart data={movieComparison} margin={{ left: 50 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" />
-            <YAxis type="category" dataKey="region" />
+            <XAxis dataKey="movie" />
+            <YAxis />
             <Tooltip />
             <Legend />
-            <Bar dataKey="total" fill="#0d6efd" name="Final Gross" />
+            <Bar dataKey="day1" fill="#ffc107" name="Day 1" />
+            <Bar dataKey="week1" fill="#0d6efd" name="Week 1" />
+            <Bar dataKey="final" fill="#198754" name="Final Gross" />
           </BarChart>
         </ResponsiveContainer>
       </div>
