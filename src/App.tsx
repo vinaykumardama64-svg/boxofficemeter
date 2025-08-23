@@ -1,6 +1,9 @@
+// Updated App.tsx with sorting, label fix, pagination, last updated, etc.
 import React, { useEffect, useState } from "react";
-import "./App.css";
 import { createClient } from "@supabase/supabase-js";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -27,163 +30,108 @@ function App() {
   const [selectedMovie, setSelectedMovie] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("");
   const [selectedArea, setSelectedArea] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [sortField, setSortField] = useState<keyof MovieData | null>(null);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
-  const toIndianFormat = (num: number) =>
-    new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(num);
-
-  const fetchFilters = async () => {
-    const [movieData, regionData, areaData] = await Promise.all([
-      supabase.from("box_office_data").select("movie"),
-      supabase.from("box_office_data").select("region"),
-      supabase.from("box_office_data").select("area"),
-    ]);
-
-    if (movieData.data) setMovies([...new Set(movieData.data.map((d) => d.movie))]);
-    if (regionData.data) setRegions([...new Set(regionData.data.map((d) => d.region))]);
-    if (areaData.data) setAreas([...new Set(areaData.data.map((d) => d.area))]);
-  };
-
-  const fetchData = async () => {
-    setLoading(true);
-    let query = supabase.from("box_office_data").select("*").limit(10000);
-
-    if (selectedMovie) query = query.eq("movie", selectedMovie);
-    if (selectedRegion) query = query.eq("region", selectedRegion);
-    if (selectedArea) query = query.eq("area", selectedArea);
-
-    const { data: fetchedData, error } = await query;
-    if (fetchedData) setData(fetchedData);
-    if (error) console.error("Could not fetch data:", error);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchFilters();
-  }, []);
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 20;
 
   useEffect(() => {
     fetchData();
-  }, [selectedMovie, selectedRegion, selectedArea]);
+  }, []);
 
-  let filteredData = data.filter((entry) =>
-    Object.values(entry)
-      .join(" ")
-      .toLowerCase()
-      .includes(search.toLowerCase())
-  );
-
-  if (sortField) {
-    filteredData = filteredData.sort((a, b) => {
-      const aVal = a[sortField];
-      const bVal = b[sortField];
-      if (typeof aVal === "number" && typeof bVal === "number") {
-        return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
-      }
-      return sortOrder === "asc"
-        ? String(aVal).localeCompare(String(bVal))
-        : String(bVal).localeCompare(String(aVal));
-    });
+  async function fetchData() {
+    const { data, error } = await supabase.from("boxoffice").select("*");
+    if (error) console.error(error);
+    else {
+      setData(data);
+      const movieList = [...new Set(data.map((d) => d.movie))].sort();
+      const regionList = [...new Set(data.map((d) => d.region))].sort();
+      const areaList = [...new Set(data.map((d) => d.area))].sort();
+      setMovies(movieList);
+      setRegions(regionList);
+      setAreas(areaList);
+    }
   }
 
-  const totalDay1 = filteredData.reduce((sum, d) => sum + (d.day1 || 0), 0);
-  const totalWeek1 = filteredData.reduce((sum, d) => sum + (d.week1 || 0), 0);
-  const totalFinal = filteredData.reduce((sum, d) => sum + (d.final_gross || 0), 0);
+  const filteredData = data.filter((item) => {
+    return (
+      (!selectedMovie || item.movie === selectedMovie) &&
+      (!selectedRegion || item.region === selectedRegion) &&
+      (!selectedArea || item.area === selectedArea) &&
+      item.movie.toLowerCase().includes(search.toLowerCase())
+    );
+  });
 
-  const handleSort = (field: keyof MovieData) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortOrder("desc");
-    }
-  };
+  const paginatedData = filteredData.slice(
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage
+  );
+
+  const latestUpdate = filteredData.reduce((latest, item) => {
+    return latest > item.last_updated ? latest : item.last_updated;
+  }, "");
 
   return (
-    <div className="App">
-      <h1>🎬 BoxOfficeTrack</h1>
-
-      <input
-        type="text"
-        placeholder="Search movie / region / area..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="search-input"
-      />
-
-      <div className="filters">
-        <select value={selectedMovie} onChange={(e) => setSelectedMovie(e.target.value)}>
-          <option value="">Movie (exact)</option>
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-2">BoxOfficeTrack</h1>
+      <div className="mb-4 grid grid-cols-1 sm:grid-cols-4 gap-2">
+        <Input
+          placeholder="Search movie..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <select
+          value={selectedMovie}
+          onChange={(e) => setSelectedMovie(e.target.value)}
+        >
+          <option value="">All Movies</option>
           {movies.map((m) => (
-            <option key={m} value={m}>{m}</option>
+            <option key={m}>{m}</option>
           ))}
         </select>
-
-        <select value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)}>
-          <option value="">Region (exact)</option>
+        <select
+          value={selectedRegion}
+          onChange={(e) => setSelectedRegion(e.target.value)}
+        >
+          <option value="">All Regions</option>
           {regions.map((r) => (
-            <option key={r} value={r}>{r}</option>
+            <option key={r}>{r}</option>
           ))}
         </select>
-
-        <select value={selectedArea} onChange={(e) => setSelectedArea(e.target.value)}>
-          <option value="">Area (exact)</option>
+        <select
+          value={selectedArea}
+          onChange={(e) => setSelectedArea(e.target.value)}
+        >
+          <option value="">All Areas</option>
           {areas.map((a) => (
-            <option key={a} value={a}>{a}</option>
+            <option key={a}>{a}</option>
           ))}
         </select>
       </div>
 
-      <div className="kpi-container">
-        <div className="kpi-card">
-          <h3>Total Day 1</h3>
-          <p>₹{toIndianFormat(totalDay1)}</p>
-        </div>
-        <div className="kpi-card">
-          <h3>Total Week 1</h3>
-          <p>₹{toIndianFormat(totalWeek1)}</p>
-        </div>
-        <div className="kpi-card">
-          <h3>Total Final Gross</h3>
-          <p>₹{toIndianFormat(totalFinal)}</p>
-        </div>
-        <div className="kpi-card">
-          <h3>Entries (loaded)</h3>
-          <p>{filteredData.length}</p>
-        </div>
+      <div className="text-sm mb-2">
+        Showing {filteredData.length} Records
+        {latestUpdate && ` | Last Updated: ${new Date(latestUpdate).toLocaleString()}`}
       </div>
 
-      {loading ? (
-        <div className="spinner"></div>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th onClick={() => handleSort("movie")}>Movie</th>
-              <th onClick={() => handleSort("region")}>Region</th>
-              <th onClick={() => handleSort("area")}>Area</th>
-              <th onClick={() => handleSort("day1")}>Day 1</th>
-              <th onClick={() => handleSort("week1")}>Week 1</th>
-              <th onClick={() => handleSort("final_gross")}>Final Gross</th>
-              <th onClick={() => handleSort("last_updated")}>Last Updated</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredData.map((entry) => (
-              <tr key={entry.id} className={search ? "highlight" : ""}>
-                <td>{entry.movie}</td>
-                <td>{entry.region}</td>
-                <td>{entry.area}</td>
-                <td>₹{toIndianFormat(entry.day1)}</td>
-                <td>₹{toIndianFormat(entry.week1)}</td>
-                <td>₹{toIndianFormat(entry.final_gross)}</td>
-                <td>{entry.last_updated}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {paginatedData.map((item) => (
+          <Card key={item.id}>
+            <CardContent className="p-4">
+              <h2 className="font-bold text-lg">{item.movie}</h2>
+              <p>{item.region} - {item.area}</p>
+              <p>Day 1: ₹{item.day1.toLocaleString()}</p>
+              <p>Week 1: ₹{item.week1.toLocaleString()}</p>
+              <p>Final: ₹{item.final_gross.toLocaleString()}</p>
+              <p className="text-xs text-gray-400">Updated: {new Date(item.last_updated).toLocaleDateString()}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {filteredData.length > itemsPerPage && (
+        <div className="flex justify-center gap-2 mt-4">
+          <Button onClick={() => setPage((p) => Math.max(p - 1, 1))}>Prev</Button>
+          <Button onClick={() => setPage((p) => p + 1)}>Next</Button>
+        </div>
       )}
     </div>
   );
