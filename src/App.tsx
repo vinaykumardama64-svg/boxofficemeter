@@ -2,6 +2,16 @@ import React, { useEffect, useState } from "react";
 import "./App.css";
 import { createClient } from "@supabase/supabase-js";
 import Select from "react-select";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Legend,
+} from "recharts";
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -108,6 +118,16 @@ function App() {
     }
   };
 
+  const top10Regions = Object.entries(
+    filteredData.reduce((acc, item) => {
+      acc[item.region] = (acc[item.region] || 0) + (item.final_gross || 0);
+      return acc;
+    }, {} as Record<string, number>)
+  )
+    .map(([region, total]) => ({ region, total }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10);
+
   return (
     <div className="App">
       <h1>🎬 BoxOfficeTrack</h1>
@@ -162,6 +182,20 @@ function App() {
           <h3>Last Updated</h3>
           <p>{latestUpdate ? new Date(latestUpdate).toLocaleString() : "--"}</p>
         </div>
+      </div>
+
+      <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Top 10 Regions by Final Gross</h2>
+      <div style={{ width: "100%", height: 400 }}>
+        <ResponsiveContainer>
+          <BarChart data={top10Regions} layout="vertical" margin={{ left: 80 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis type="number" />
+            <YAxis type="category" dataKey="region" />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="total" fill="#0d6efd" name="Final Gross" />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
       <table>
