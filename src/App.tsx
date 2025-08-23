@@ -220,13 +220,19 @@ function App() {
         </div>
       )}
 
+     ... // existing code before chart remains unchanged
+
       <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Top 10 Movies Comparison</h2>
-      <div style={{ width: "100%", height: 400 }}>
-        <ResponsiveContainer>
-          <BarChart data={movieComparison} margin={{ left: 50 }}>
+      <div style={{ width: "100%", height: 500 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={movieComparison}
+            layout="vertical"
+            margin={{ top: 20, right: 30, left: 100, bottom: 5 }}
+          >
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="movie" />
-            <YAxis />
+            <XAxis type="number" />
+            <YAxis dataKey="movie" type="category" width={150} />
             <Tooltip />
             <Legend />
             <Bar dataKey="day1" fill="#ffc107" name="Day 1" />
@@ -235,6 +241,7 @@ function App() {
           </BarChart>
         </ResponsiveContainer>
       </div>
+
     </div>
   );
 }
