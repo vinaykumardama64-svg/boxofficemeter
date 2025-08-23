@@ -230,29 +230,28 @@ function App() {
 
 ... // existing code before chart remains unchanged
 
-      <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Top 10 Movies Comparison</h2>
-      <div style={{ width: "100%", height: 500 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={movieComparison}
-            layout="vertical"
-            margin={{ top: 20, right: 30, left: 100, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" />
-            <YAxis dataKey="movie" type="category" width={150} />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="day1" fill="#ffc107" name="Day 1" />
-            <Bar dataKey="week1" fill="#0d6efd" name="Week 1" />
-            <Bar dataKey="final" fill="#198754" name="Final Gross" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-    </div>
-  );
-}
-
-export default App;
-
+     <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Top 10 Movies Comparison</h2>
+<div style={{ width: "100%", height: 500 }}>
+  <ResponsiveContainer width="100%" height="100%">
+    <BarChart
+      data={movieComparison}
+      layout="vertical"
+      margin={{ top: 20, right: 30, left: 100, bottom: 5 }}
+    >
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis type="number" />
+      <YAxis dataKey="movie" type="category" width={150} />
+      <Tooltip />
+      <Legend />
+      <Bar dataKey="day1" fill="#ffc107" name="Day 1">
+        <LabelList dataKey="day1" position="right" formatter={(value) => `₹${value.toLocaleString("en-IN")}`} />
+      </Bar>
+      <Bar dataKey="week1" fill="#0d6efd" name="Week 1">
+        <LabelList dataKey="week1" position="right" formatter={(value) => `₹${value.toLocaleString("en-IN")}`} />
+      </Bar>
+      <Bar dataKey="final" fill="#198754" name="Final Gross">
+        <LabelList dataKey="final" position="right" formatter={(value) => `₹${value.toLocaleString("en-IN")}`} />
+      </Bar>
+    </BarChart>
+  </ResponsiveContainer>
+</div>
