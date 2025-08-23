@@ -1,18 +1,18 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
 import { createClient } from "@supabase/supabase-js";
+import Select from "react-select";
 import {
   BarChart,
   Bar,
   XAxis,
   YAxis,
   Tooltip,
-  CartesianGrid,
   ResponsiveContainer,
+  CartesianGrid,
   Legend,
   LabelList,
 } from "recharts";
-import Select from "react-select";
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -36,101 +36,178 @@ function App() {
   const [movies, setMovies] = useState<string[]>([]);
   const [regions, setRegions] = useState<string[]>([]);
   const [areas, setAreas] = useState<string[]>([]);
-  const [selectedMovie, setSelectedMovie] = useState<string[]>([]);
-  const [selectedRegion, setSelectedRegion] = useState<string[]>([]);
-  const [selectedArea, setSelectedArea] = useState<string[]>([]);
-  const [sortKey, setSortKey] = useState<keyof MovieData | null>(null);
-  const [sortAsc, setSortAsc] = useState(true);
+  const [selectedMovies, setSelectedMovies] = useState<{ value: string; label: string }[]>([]);
+  const [selectedRegions, setSelectedRegions] = useState<{ value: string; label: string }[]>([]);
+  const [selectedAreas, setSelectedAreas] = useState<{ value: string; label: string }[]>([]);
   const [page, setPage] = useState(1);
   const itemsPerPage = 25;
+  const [sortColumn, setSortColumn] = useState<keyof MovieData | "">("");
+  const [sortAsc, setSortAsc] = useState(true);
+
+  const toIndianFormat = (num: number) =>
+    new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(num);
+
+  const fetchFilters = async () => {
+    const [movieData, regionData, areaData] = await Promise.all([
+      supabase.from("box_office_data").select("movie"),
+      supabase.from("box_office_data").select("region"),
+      supabase.from("box_office_data").select("area"),
+    ]);
+
+    if (movieData.data)
+      setMovies([...new Set(movieData.data.map((d) => d.movie))].sort());
+    if (regionData.data)
+      setRegions([...new Set(regionData.data.map((d) => d.region))].sort());
+    if (areaData.data)
+      setAreas([...new Set(areaData.data.map((d) => d.area))].sort());
+  };
+
+  const fetchData = async () => {
+    let query = supabase.from("box_office_data").select("*").limit(10000);
+
+    if (selectedMovies.length > 0)
+      query = query.in("movie", selectedMovies.map((s) => s.value));
+    if (selectedRegions.length > 0)
+      query = query.in("region", selectedRegions.map((s) => s.value));
+    if (selectedAreas.length > 0)
+      query = query.in("area", selectedAreas.map((s) => s.value));
+
+    const { data: fetchedData, error } = await query;
+    if (fetchedData) setData(fetchedData);
+    if (error) console.error("Could not fetch data:", error);
+  };
+
+  useEffect(() => {
+    fetchFilters();
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [selectedMovies, selectedRegions, selectedAreas]);
 
-  async function fetchData() {
-    const { data: rows } = await supabase.from("movie_data").select("*");
-    if (rows) {
-      setData(rows);
-      setMovies([...new Set(rows.map((r) => r.movie))].sort());
-      setRegions([...new Set(rows.map((r) => r.region))].sort());
-      setAreas([...new Set(rows.map((r) => r.area))].sort());
-    }
-  }
-
-  const filteredData = data.filter(
-    (entry) =>
-      (selectedMovie.length === 0 || selectedMovie.includes(entry.movie)) &&
-      (selectedRegion.length === 0 || selectedRegion.includes(entry.region)) &&
-      (selectedArea.length === 0 || selectedArea.includes(entry.area))
+  const filteredData = data.filter((entry) =>
+    Object.values(entry).join(" ").toLowerCase().includes(search.toLowerCase())
   );
 
   const sortedData = [...filteredData].sort((a, b) => {
-    if (!sortKey) return 0;
-    const valA = a[sortKey];
-    const valB = b[sortKey];
-    if (typeof valA === "number" && typeof valB === "number") {
-      return sortAsc ? valA - valB : valB - valA;
+    if (!sortColumn) return 0;
+    const valA = a[sortColumn];
+    const valB = b[sortColumn];
+    if (valA === undefined || valB === undefined) return 0;
+    if (typeof valA === "string" && typeof valB === "string") {
+      return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
     }
-    return sortAsc
-      ? String(valA).localeCompare(String(valB))
-      : String(valB).localeCompare(String(valA));
+    return sortAsc ? (valA as number) - (valB as number) : (valB as number) - (valA as number);
   });
 
-  const paginatedData = sortedData.slice(
-    (page - 1) * itemsPerPage,
-    page * itemsPerPage
-  );
+  const totalDay1 = sortedData.reduce((sum, d) => sum + (d.day1 || 0), 0);
+  const totalWeek1 = sortedData.reduce((sum, d) => sum + (d.week1 || 0), 0);
+  const totalFinal = sortedData.reduce((sum, d) => sum + (d.final_gross || 0), 0);
 
-  const handleSort = (key: keyof MovieData) => {
-    if (sortKey === key) setSortAsc(!sortAsc);
-    else {
-      setSortKey(key);
+  const latestUpdate = sortedData.reduce((latest, item) => {
+    return latest > item.last_updated ? latest : item.last_updated;
+  }, "");
+
+  const paginatedData = sortedData.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
+  const handleSort = (column: keyof MovieData) => {
+    if (sortColumn === column) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortColumn(column);
       setSortAsc(true);
     }
   };
 
-  const toIndianFormat = (num: number) =>
-    num.toLocaleString("en-IN", { maximumFractionDigits: 0 });
-
-  const movieComparison = [...filteredData]
-    .reduce((acc: Record<string, any>, curr) => {
-      if (!acc[curr.movie]) acc[curr.movie] = { movie: curr.movie, day1: 0, week1: 0, final: 0 };
-      acc[curr.movie].day1 += curr.day1;
-      acc[curr.movie].week1 += curr.week1;
-      acc[curr.movie].final += curr.final_gross;
+  const movieComparison = Object.values(
+    filteredData.reduce((acc, item) => {
+      if (!acc[item.movie]) {
+        acc[item.movie] = { movie: item.movie, day1: 0, week1: 0, final: 0 };
+      }
+      acc[item.movie].day1 += item.day1 || 0;
+      acc[item.movie].week1 += item.week1 || 0;
+      acc[item.movie].final += item.final_gross || 0;
       return acc;
-    }, {})
-
-  const top10Movies = Object.values(movieComparison)
-    .sort((a: any, b: any) => b.final - a.final)
-    .slice(0, 10);
+    }, {} as Record<string, { movie: string; day1: number; week1: number; final: number }>)
+  ).sort((a, b) => b.final - a.final).slice(0, 10);
 
   return (
     <div className="App">
-      <h1>BoxOfficeTrack</h1>
+      <h1>🎬 BoxOfficeTrack</h1>
+
+      <input
+        type="text"
+        placeholder="Search movie / region / area..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="search-input"
+      />
+
       <div className="filters">
         <Select
-          options={movies.map((m) => ({ label: m, value: m }))}
           isMulti
-          onChange={(opts) => setSelectedMovie(opts.map((o) => o.value))}
-          placeholder="Filter by Movie"
+          options={movies.map((m) => ({ value: m, label: m }))}
+          onChange={(selected) => setSelectedMovies(selected as any)}
+          placeholder="Select Movie(s)"
         />
         <Select
-          options={regions.map((m) => ({ label: m, value: m }))}
           isMulti
-          onChange={(opts) => setSelectedRegion(opts.map((o) => o.value))}
-          placeholder="Filter by Region"
+          options={regions.map((r) => ({ value: r, label: r }))}
+          onChange={(selected) => setSelectedRegions(selected as any)}
+          placeholder="Select Region(s)"
         />
         <Select
-          options={areas.map((m) => ({ label: m, value: m }))}
           isMulti
-          onChange={(opts) => setSelectedArea(opts.map((o) => o.value))}
-          placeholder="Filter by Area"
+          options={areas.map((a) => ({ value: a, label: a }))}
+          onChange={(selected) => setSelectedAreas(selected as any)}
+          placeholder="Select Area(s)"
         />
       </div>
 
-      <p>{sortedData.length} Records</p>
+      <div className="kpi-container">
+        <div className="kpi-card">
+          <h3>Total Day 1</h3>
+          <p>₹{toIndianFormat(totalDay1)}</p>
+        </div>
+        <div className="kpi-card">
+          <h3>Total Week 1</h3>
+          <p>₹{toIndianFormat(totalWeek1)}</p>
+        </div>
+        <div className="kpi-card">
+          <h3>Total Final Gross</h3>
+          <p>₹{toIndianFormat(totalFinal)}</p>
+        </div>
+        <div className="kpi-card">
+          <h3>Records</h3>
+          <p>{sortedData.length}</p>
+        </div>
+        <div className="kpi-card">
+          <h3>Last Updated</h3>
+          <p>{latestUpdate ? new Date(latestUpdate).toLocaleString() : "--"}</p>
+        </div>
+      </div>
+
+      <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Top 10 Movies Comparison</h2>
+      <div style={{ width: "100%", height: 400 }}>
+        <ResponsiveContainer>
+          <BarChart data={movieComparison} margin={{ left: 50 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="movie" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="day1" fill="#ffc107" name="Day 1">
+              <LabelList dataKey="day1" position="top" formatter={toIndianFormat} />
+            </Bar>
+            <Bar dataKey="week1" fill="#0d6efd" name="Week 1">
+              <LabelList dataKey="week1" position="top" formatter={toIndianFormat} />
+            </Bar>
+            <Bar dataKey="final" fill="#198754" name="Final Gross">
+              <LabelList dataKey="final" position="top" formatter={toIndianFormat} />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
 
       <table>
         <thead>
@@ -171,32 +248,6 @@ function App() {
           </button>
         </div>
       )}
-
-      <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Top 10 Movies Comparison</h2>
-      <div style={{ width: "100%", height: 500 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={top10Movies}
-            layout="vertical"
-            margin={{ top: 20, right: 30, left: 100, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" />
-            <YAxis dataKey="movie" type="category" width={150} />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="day1" fill="#ffc107" name="Day 1">
-              <LabelList dataKey="day1" position="right" formatter={toIndianFormat} />
-            </Bar>
-            <Bar dataKey="week1" fill="#0d6efd" name="Week 1">
-              <LabelList dataKey="week1" position="right" formatter={toIndianFormat} />
-            </Bar>
-            <Bar dataKey="final" fill="#198754" name="Final Gross">
-              <LabelList dataKey="final" position="right" formatter={toIndianFormat} />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
     </div>
   );
 }
