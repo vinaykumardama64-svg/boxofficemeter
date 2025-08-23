@@ -40,10 +40,11 @@ function App() {
   const [selectedRegions, setSelectedRegions] = useState<{ value: string; label: string }[]>([]);
   const [selectedAreas, setSelectedAreas] = useState<{ value: string; label: string }[]>([]);
   const [page, setPage] = useState(1);
+  const [groupedPage, setGroupedPage] = useState(1);
   const itemsPerPage = 25;
+  const groupedItemsPerPage = 20;
   const [sortColumn, setSortColumn] = useState<keyof MovieData | "">("");
   const [sortAsc, setSortAsc] = useState(true);
-  const [groupSortField, setGroupSortField] = useState<"final" | "day1" | "week1">("final");
 
   const toIndianFormat = (num: number) =>
     new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(num);
@@ -66,8 +67,11 @@ function App() {
   const fetchData = async () => {
     let query = supabase.from("box_office_data").select("*").limit(10000);
 
-    if (selectedMovies.length > 0)
-      query = query.in("movie", selectedMovies.map((s) => s.value));
+    if (selectedMovies.length > 0) {
+      const baseTitles = selectedMovies.map((s) => s.value.replace(/\s*\(.*?\)$/, ""));
+      const filters = baseTitles.map((title) => `movie.ilike.${title}%`).join(",");
+      query = query.or(filters);
+    }
     if (selectedRegions.length > 0)
       query = query.in("region", selectedRegions.map((s) => s.value));
     if (selectedAreas.length > 0)
@@ -120,19 +124,22 @@ function App() {
     }
   };
 
-  const movieGroupMap = filteredData.reduce((acc, item) => {
-    const baseTitle = item.movie.includes("(") ? item.movie.split("(")[0].trim() : item.movie;
-    if (!acc[baseTitle]) {
-      acc[baseTitle] = { movie: baseTitle, day1: 0, week1: 0, final: 0 };
-    }
-    acc[baseTitle].day1 += item.day1 || 0;
-    acc[baseTitle].week1 += item.week1 || 0;
-    acc[baseTitle].final += item.final_gross || 0;
-    return acc;
-  }, {} as Record<string, { movie: string; day1: number; week1: number; final: number }>);
+  const groupedByBaseTitle = Object.values(
+    filteredData.reduce((acc, item) => {
+      const baseTitle = item.movie.replace(/\s*\(.*?\)$/, "");
+      if (!acc[baseTitle]) {
+        acc[baseTitle] = { movie: baseTitle, day1: 0, week1: 0, final: 0 };
+      }
+      acc[baseTitle].day1 += item.day1 || 0;
+      acc[baseTitle].week1 += item.week1 || 0;
+      acc[baseTitle].final += item.final_gross || 0;
+      return acc;
+    }, {} as Record<string, { movie: string; day1: number; week1: number; final: number }>)
+  ).sort((a, b) => b.final - a.final);
 
-  const movieComparison = Object.values(movieGroupMap).sort(
-    (a, b) => b[groupSortField] - a[groupSortField]
+  const paginatedGrouped = groupedByBaseTitle.slice(
+    (groupedPage - 1) * groupedItemsPerPage,
+    groupedPage * groupedItemsPerPage
   );
 
   return (
@@ -191,6 +198,43 @@ function App() {
         </div>
       </div>
 
+      <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Base Movie Titles (Grouped)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Movie</th>
+            <th>Day 1</th>
+            <th>Week 1</th>
+            <th>Final Gross</th>
+          </tr>
+        </thead>
+        <tbody>
+          {paginatedGrouped.map((entry, i) => (
+            <tr key={i}>
+              <td>{entry.movie}</td>
+              <td>₹{toIndianFormat(entry.day1)}</td>
+              <td>₹{toIndianFormat(entry.week1)}</td>
+              <td>₹{toIndianFormat(entry.final)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {groupedByBaseTitle.length > groupedItemsPerPage && (
+        <div className="pagination">
+          <button onClick={() => setGroupedPage(Math.max(groupedPage - 1, 1))}>Prev</button>
+          <button
+            onClick={() =>
+              setGroupedPage((p) =>
+                p * groupedItemsPerPage < groupedByBaseTitle.length ? p + 1 : p
+              )
+            }
+          >
+            Next
+          </button>
+        </div>
+      )}
+
       <table>
         <thead>
           <tr>
@@ -231,44 +275,17 @@ function App() {
         </div>
       )}
 
-      <div style={{ marginTop: 40 }}>
-        <h2 style={{ textAlign: "center" }}>Grouped Movie Gross Comparison</h2>
-        <div style={{ display: "flex", justifyContent: "center", gap: "1rem", marginBottom: 12 }}>
-          <button onClick={() => setGroupSortField("day1")}>Sort by Day 1</button>
-          <button onClick={() => setGroupSortField("week1")}>Sort by Week 1</button>
-          <button onClick={() => setGroupSortField("final")}>Sort by Final</button>
-        </div>
-
-        <table style={{ margin: "auto", marginBottom: 30 }}>
-          <thead>
-            <tr>
-              <th>Movie (Grouped)</th>
-              <th>Day 1</th>
-              <th>Week 1</th>
-              <th>Final</th>
-            </tr>
-          </thead>
-          <tbody>
-            {movieComparison.map((item) => (
-              <tr key={item.movie}>
-                <td>{item.movie}</td>
-                <td>₹{toIndianFormat(item.day1)}</td>
-                <td>₹{toIndianFormat(item.week1)}</td>
-                <td>₹{toIndianFormat(item.final)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <ResponsiveContainer width="100%" height={500}>
+      <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Top Movie Comparison</h2>
+      <div style={{ width: "100%", height: 500 }}>
+        <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={movieComparison}
+            data={groupedByBaseTitle.slice(0, 20)}
             layout="vertical"
-            margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+            margin={{ top: 20, right: 30, left: 100, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis type="number" />
-            <YAxis type="category" dataKey="movie" width={150} />
+            <YAxis dataKey="movie" type="category" width={150} />
             <Tooltip />
             <Legend />
             <Bar dataKey="day1" fill="#ffc107" name="Day 1">
