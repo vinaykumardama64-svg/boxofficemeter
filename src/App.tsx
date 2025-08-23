@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
 import { createClient } from "@supabase/supabase-js";
+import Select from "react-select";
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -24,11 +25,13 @@ function App() {
   const [movies, setMovies] = useState<string[]>([]);
   const [regions, setRegions] = useState<string[]>([]);
   const [areas, setAreas] = useState<string[]>([]);
-  const [selectedMovie, setSelectedMovie] = useState("");
-  const [selectedRegion, setSelectedRegion] = useState("");
-  const [selectedArea, setSelectedArea] = useState("");
+  const [selectedMovies, setSelectedMovies] = useState<{ value: string; label: string }[]>([]);
+  const [selectedRegions, setSelectedRegions] = useState<{ value: string; label: string }[]>([]);
+  const [selectedAreas, setSelectedAreas] = useState<{ value: string; label: string }[]>([]);
   const [page, setPage] = useState(1);
   const itemsPerPage = 25;
+  const [sortColumn, setSortColumn] = useState<keyof MovieData | "">("");
+  const [sortAsc, setSortAsc] = useState(true);
 
   const toIndianFormat = (num: number) =>
     new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(num);
@@ -50,9 +53,14 @@ function App() {
 
   const fetchData = async () => {
     let query = supabase.from("box_office_data").select("*").limit(10000);
-    if (selectedMovie) query = query.eq("movie", selectedMovie);
-    if (selectedRegion) query = query.eq("region", selectedRegion);
-    if (selectedArea) query = query.eq("area", selectedArea);
+
+    if (selectedMovies.length > 0)
+      query = query.in("movie", selectedMovies.map((s) => s.value));
+    if (selectedRegions.length > 0)
+      query = query.in("region", selectedRegions.map((s) => s.value));
+    if (selectedAreas.length > 0)
+      query = query.in("area", selectedAreas.map((s) => s.value));
+
     const { data: fetchedData, error } = await query;
     if (fetchedData) setData(fetchedData);
     if (error) console.error("Could not fetch data:", error);
@@ -64,27 +72,41 @@ function App() {
 
   useEffect(() => {
     fetchData();
-  }, [selectedMovie, selectedRegion, selectedArea]);
+  }, [selectedMovies, selectedRegions, selectedAreas]);
 
   const filteredData = data.filter((entry) =>
     Object.values(entry).join(" ").toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalDay1 = filteredData.reduce((sum, d) => sum + (d.day1 || 0), 0);
-  const totalWeek1 = filteredData.reduce((sum, d) => sum + (d.week1 || 0), 0);
-  const totalFinal = filteredData.reduce(
-    (sum, d) => sum + (d.final_gross || 0),
-    0
-  );
+  const sortedData = [...filteredData].sort((a, b) => {
+    if (!sortColumn) return 0;
+    const valA = a[sortColumn];
+    const valB = b[sortColumn];
+    if (valA === undefined || valB === undefined) return 0;
+    if (typeof valA === "string" && typeof valB === "string") {
+      return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    }
+    return sortAsc ? (valA as number) - (valB as number) : (valB as number) - (valA as number);
+  });
 
-  const latestUpdate = filteredData.reduce((latest, item) => {
+  const totalDay1 = sortedData.reduce((sum, d) => sum + (d.day1 || 0), 0);
+  const totalWeek1 = sortedData.reduce((sum, d) => sum + (d.week1 || 0), 0);
+  const totalFinal = sortedData.reduce((sum, d) => sum + (d.final_gross || 0), 0);
+
+  const latestUpdate = sortedData.reduce((latest, item) => {
     return latest > item.last_updated ? latest : item.last_updated;
   }, "");
 
-  const paginatedData = filteredData.slice(
-    (page - 1) * itemsPerPage,
-    page * itemsPerPage
-  );
+  const paginatedData = sortedData.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
+  const handleSort = (column: keyof MovieData) => {
+    if (sortColumn === column) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortColumn(column);
+      setSortAsc(true);
+    }
+  };
 
   return (
     <div className="App">
@@ -99,39 +121,24 @@ function App() {
       />
 
       <div className="filters">
-        <select
-          value={selectedMovie}
-          onChange={(e) => setSelectedMovie(e.target.value)}
-        >
-          <option value="">Movie (exact)</option>
-          {movies.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
-        <select
-          value={selectedRegion}
-          onChange={(e) => setSelectedRegion(e.target.value)}
-        >
-          <option value="">Region (exact)</option>
-          {regions.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-        <select
-          value={selectedArea}
-          onChange={(e) => setSelectedArea(e.target.value)}
-        >
-          <option value="">Area (exact)</option>
-          {areas.map((a) => (
-            <option key={a} value={a}>
-              {a}
-            </option>
-          ))}
-        </select>
+        <Select
+          isMulti
+          options={movies.map((m) => ({ value: m, label: m }))}
+          onChange={(selected) => setSelectedMovies(selected as any)}
+          placeholder="Select Movie(s)"
+        />
+        <Select
+          isMulti
+          options={regions.map((r) => ({ value: r, label: r }))}
+          onChange={(selected) => setSelectedRegions(selected as any)}
+          placeholder="Select Region(s)"
+        />
+        <Select
+          isMulti
+          options={areas.map((a) => ({ value: a, label: a }))}
+          onChange={(selected) => setSelectedAreas(selected as any)}
+          placeholder="Select Area(s)"
+        />
       </div>
 
       <div className="kpi-container">
@@ -149,7 +156,7 @@ function App() {
         </div>
         <div className="kpi-card">
           <h3>Records</h3>
-          <p>{filteredData.length}</p>
+          <p>{sortedData.length}</p>
         </div>
         <div className="kpi-card">
           <h3>Last Updated</h3>
@@ -160,13 +167,13 @@ function App() {
       <table>
         <thead>
           <tr>
-            <th>Movie</th>
-            <th>Region</th>
-            <th>Area</th>
-            <th>Day 1</th>
-            <th>Week 1</th>
-            <th>Final Gross</th>
-            <th>Last Updated</th>
+            <th onClick={() => handleSort("movie")}>Movie</th>
+            <th onClick={() => handleSort("region")}>Region</th>
+            <th onClick={() => handleSort("area")}>Area</th>
+            <th onClick={() => handleSort("day1")}>Day 1</th>
+            <th onClick={() => handleSort("week1")}>Week 1</th>
+            <th onClick={() => handleSort("final_gross")}>Final Gross</th>
+            <th onClick={() => handleSort("last_updated")}>Last Updated</th>
           </tr>
         </thead>
         <tbody>
@@ -184,16 +191,12 @@ function App() {
         </tbody>
       </table>
 
-      {filteredData.length > itemsPerPage && (
+      {sortedData.length > itemsPerPage && (
         <div className="pagination">
-          <button onClick={() => setPage(Math.max(page - 1, 1))}>
-            Prev
-          </button>
+          <button onClick={() => setPage(Math.max(page - 1, 1))}>Prev</button>
           <button
             onClick={() =>
-              setPage((p) =>
-                p * itemsPerPage < filteredData.length ? p + 1 : p
-              )
+              setPage((p) => (p * itemsPerPage < sortedData.length ? p + 1 : p))
             }
           >
             Next
