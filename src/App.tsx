@@ -30,11 +30,6 @@ interface MovieData {
   last_updated: string;
 }
 
-function getBaseTitle(movie: string): string {
-  const match = movie.match(/^(.*?)(\s*\(.*\))?$/);
-  return match ? match[1].trim() : movie;
-}
-
 function App() {
   const [data, setData] = useState<MovieData[]>([]);
   const [search, setSearch] = useState("");
@@ -48,6 +43,7 @@ function App() {
   const itemsPerPage = 25;
   const [sortColumn, setSortColumn] = useState<keyof MovieData | "">("");
   const [sortAsc, setSortAsc] = useState(true);
+  const [groupSortField, setGroupSortField] = useState<"final" | "day1" | "week1">("final");
 
   const toIndianFormat = (num: number) =>
     new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(num);
@@ -124,18 +120,20 @@ function App() {
     }
   };
 
-  const movieComparison = Object.values(
-    filteredData.reduce((acc, item) => {
-      const baseTitle = getBaseTitle(item.movie);
-      if (!acc[baseTitle]) {
-        acc[baseTitle] = { movie: baseTitle, day1: 0, week1: 0, final: 0 };
-      }
-      acc[baseTitle].day1 += item.day1 || 0;
-      acc[baseTitle].week1 += item.week1 || 0;
-      acc[baseTitle].final += item.final_gross || 0;
-      return acc;
-    }, {} as Record<string, { movie: string; day1: number; week1: number; final: number }>)
-  ).sort((a, b) => b.final - a.final).slice(0, 10);
+  const movieGroupMap = filteredData.reduce((acc, item) => {
+    const baseTitle = item.movie.includes("(") ? item.movie.split("(")[0].trim() : item.movie;
+    if (!acc[baseTitle]) {
+      acc[baseTitle] = { movie: baseTitle, day1: 0, week1: 0, final: 0 };
+    }
+    acc[baseTitle].day1 += item.day1 || 0;
+    acc[baseTitle].week1 += item.week1 || 0;
+    acc[baseTitle].final += item.final_gross || 0;
+    return acc;
+  }, {} as Record<string, { movie: string; day1: number; week1: number; final: number }>);
+
+  const movieComparison = Object.values(movieGroupMap).sort(
+    (a, b) => b[groupSortField] - a[groupSortField]
+  );
 
   return (
     <div className="App">
@@ -233,27 +231,54 @@ function App() {
         </div>
       )}
 
-      <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Top 10 Movies Comparison</h2>
-      <div style={{ width: "100%", height: 500 }}>
-        <ResponsiveContainer>
+      <div style={{ marginTop: 40 }}>
+        <h2 style={{ textAlign: "center" }}>Grouped Movie Gross Comparison</h2>
+        <div style={{ display: "flex", justifyContent: "center", gap: "1rem", marginBottom: 12 }}>
+          <button onClick={() => setGroupSortField("day1")}>Sort by Day 1</button>
+          <button onClick={() => setGroupSortField("week1")}>Sort by Week 1</button>
+          <button onClick={() => setGroupSortField("final")}>Sort by Final</button>
+        </div>
+
+        <table style={{ margin: "auto", marginBottom: 30 }}>
+          <thead>
+            <tr>
+              <th>Movie (Grouped)</th>
+              <th>Day 1</th>
+              <th>Week 1</th>
+              <th>Final</th>
+            </tr>
+          </thead>
+          <tbody>
+            {movieComparison.map((item) => (
+              <tr key={item.movie}>
+                <td>{item.movie}</td>
+                <td>₹{toIndianFormat(item.day1)}</td>
+                <td>₹{toIndianFormat(item.week1)}</td>
+                <td>₹{toIndianFormat(item.final)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <ResponsiveContainer width="100%" height={500}>
           <BarChart
             data={movieComparison}
             layout="vertical"
-            margin={{ top: 20, right: 30, left: 100, bottom: 5 }}
+            margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis type="number" />
-            <YAxis dataKey="movie" type="category" width={150} />
+            <YAxis type="category" dataKey="movie" width={150} />
             <Tooltip />
             <Legend />
             <Bar dataKey="day1" fill="#ffc107" name="Day 1">
-              <LabelList dataKey="day1" position="right" formatter={toIndianFormat} />
+              <LabelList dataKey="day1" position="right" />
             </Bar>
             <Bar dataKey="week1" fill="#0d6efd" name="Week 1">
-              <LabelList dataKey="week1" position="right" formatter={toIndianFormat} />
+              <LabelList dataKey="week1" position="right" />
             </Bar>
             <Bar dataKey="final" fill="#198754" name="Final Gross">
-              <LabelList dataKey="final" position="right" formatter={toIndianFormat} />
+              <LabelList dataKey="final" position="right" />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
