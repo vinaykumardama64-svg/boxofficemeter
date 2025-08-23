@@ -228,8 +228,6 @@ function App() {
         </div>
       )}
 
-... // existing code before chart remains unchanged
-
      <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Top 10 Movies Comparison</h2>
 <div style={{ width: "100%", height: 500 }}>
   <ResponsiveContainer width="100%" height="100%">
@@ -255,3 +253,8 @@ function App() {
     </BarChart>
   </ResponsiveContainer>
 </div>
+</div>  {/* Closing main App div */}
+);
+}
+
+export default App;
