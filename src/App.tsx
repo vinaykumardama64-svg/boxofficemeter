@@ -198,7 +198,7 @@ function App() {
         </div>
       </div>
 
-      <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Base Movie Titles (Grouped)</h2>
+      <h2 style={{ textAlign: "center", marginTop: "2rem" }}>All Versions</h2>
       <table>
         <thead>
           <tr>
@@ -275,7 +275,7 @@ function App() {
         </div>
       )}
 
-  <h2 style={{ textAlign: "center", marginTop: "2rem" }}>Top Movie Comparison (Grouped)</h2>
+  <h2 style={{ textAlign: "center", marginTop: "2rem" }}>All versions top chart </h2>
 <div style={{ width: "100%", height: 500 }}>
   <ResponsiveContainer width="100%" height="100%">
     <BarChart
@@ -313,7 +313,7 @@ function App() {
     </BarChart>
   </ResponsiveContainer>
 </div>
-<h2 style={{ textAlign: "center", marginTop: "2rem" }}>Title-Specific Totals</h2>
+<h2 style={{ textAlign: "center", marginTop: "2rem" }}>Gross Split by Version</h2>
 <table>
   <thead>
     <tr>
